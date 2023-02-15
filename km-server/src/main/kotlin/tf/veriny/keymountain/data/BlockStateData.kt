@@ -46,6 +46,11 @@ public class BlockStateData {
      */
     @Suppress("UNCHECKED_CAST")
     internal fun generate(blockType: BlockType) {
+        if (blockType.properties.isEmpty()) {
+            data.add(intArrayOf(counter++))
+            return
+        }
+
         // ewwww
         // this is all just a gross amount of casts.
         val sets = mutableListOf<LinkedHashSet<BPair>>()

@@ -1,6 +1,6 @@
 
 dependencies {
-    implementation(project(":km-api"))
+    api(project(":km-api"))
     implementation("it.unimi.dsi:fastutil:8.5.11")
 
     // == Logging == //
