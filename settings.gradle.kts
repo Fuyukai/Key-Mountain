@@ -12,3 +12,4 @@ rootProject.name = "key-mountain"
 
 include("km-api")
 include("km-server")
+include("km-vanilla")

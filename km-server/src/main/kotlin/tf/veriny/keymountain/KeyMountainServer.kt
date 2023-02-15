@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import jdk.net.ExtendedSocketOptions
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.client.ClientConnection
+import tf.veriny.keymountain.data.KeyMountainData
 import tf.veriny.keymountain.network.ProtocolPacketRegistryImpl
 import tf.veriny.keymountain.network.ServerNetworker
 import java.net.InetSocketAddress
@@ -28,6 +29,7 @@ public class KeyMountainServer {
 
     // order of initialisation matters, registries go at the top
     public val packets: ProtocolPacketRegistryImpl = ProtocolPacketRegistryImpl()
+    public val data: KeyMountainData = KeyMountainData()
 
     // then utilities that would otherwise need the registries
     public val networker: ServerNetworker = ServerNetworker(this)
