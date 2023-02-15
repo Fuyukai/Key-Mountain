@@ -1,27 +1,27 @@
 package tf.veriny.keymountain.api.util
 
-import kotlin.reflect.KFunction
 
-public typealias CartesianProduct = Set<List<*>>
-
-/**
- * Create the cartesian product of any number of sets of any size. Useful for parameterized tests
- * to generate a large parameter space with little code. Note that any type information is lost, as
- * the returned set contains list of any combination of types in the input set.
- *
- * @param sets Any additional sets.
- */
-public fun cartesianProduct(vararg sets: Set<*>): CartesianProduct {
-    val list = (sets)
-        .fold(listOf(listOf<Any?>())) { acc, set ->
-            acc.flatMap { list -> set.map { element -> list + element } }
-        }
-
-    return LinkedHashSet(list)
+// credit: https://stackoverflow.com/a/714256
+// written by Michael Myers, licenced under the CC 3.0 BY-SA
+// then J2K'd.
+public fun cartesianProduct(vararg sets: Set<*>): Set<MutableSet<Any?>> {
+    require(sets.size >= 2) {
+        "Can't have a product of fewer than two sets (got ${sets.size})"
+    }
+    return cartesianImpl(0, *sets)
 }
 
-
-/**
- * Transform elements of a cartesian product.
- */
-public fun <T> CartesianProduct.map(transform: KFunction<T>): List<T> = map { transform.call(*it.toTypedArray()) }
+private fun cartesianImpl(index: Int, vararg sets: Set<*>): Set<MutableSet<Any?>> {
+    val ret: MutableSet<MutableSet<Any?>> = HashSet()
+    if (index == sets.size) {
+        ret.add(HashSet())
+    } else {
+        for (obj in sets[index]) {
+            for (set in cartesianImpl(index + 1, *sets)) {
+                set.add(obj)
+                ret.add(set)
+            }
+        }
+    }
+    return ret
+}
