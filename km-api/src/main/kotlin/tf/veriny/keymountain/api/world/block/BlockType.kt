@@ -2,6 +2,7 @@ package tf.veriny.keymountain.api.world.block
 
 import tf.veriny.keymountain.api.KeyMountainException
 import tf.veriny.keymountain.api.util.Identifiable
+import tf.veriny.keymountain.api.util.Identifier
 
 // gross interface hack
 
@@ -74,4 +75,8 @@ public interface BlockType : Identifiable, WithBlockMetadata {
 /**
  * A block type that has no additional properties.
  */
-public abstract class EmptyBlockType : BlockType, WithBlockMetadata by WithBlockMetadata.NoMetadata
+public open class EmptyBlockType(
+    override val identifier: Identifier
+) : BlockType, WithBlockMetadata by WithBlockMetadata.NoMetadata {
+    public constructor(id: String) : this(Identifier(id))
+}
