@@ -6,7 +6,7 @@ import tf.veriny.keymountain.api.data.RegistryWithIds
 import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 
-internal open class MapRegistry<E : Identifiable> : RegistryWithIds<E> {
+internal open class MapRegistry<E : Identifiable>(override val identifier: Identifier) : RegistryWithIds<E> {
     private var idCounter = 0
     private val items = mutableMapOf<Identifier, E>()
     private val idMapping = Object2IntArrayMap<Identifier>().also { it.defaultReturnValue(-1) }

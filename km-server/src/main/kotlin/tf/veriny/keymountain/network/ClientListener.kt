@@ -10,8 +10,9 @@ import tf.veriny.keymountain.api.PayloadTooLongException
 import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
-import tf.veriny.keymountain.api.network.ProtocolPacketRegistry
+import tf.veriny.keymountain.api.network.PacketRegistry
 import tf.veriny.keymountain.api.network.packets.C2SHandshake
+import tf.veriny.keymountain.api.network.packets.S2CDisconnectPlay
 import java.io.EOFException
 import java.net.Socket
 import java.util.concurrent.LinkedBlockingQueue
@@ -23,15 +24,15 @@ import java.util.concurrent.TimeUnit
 internal class ClientListener(
     private val clientReference: ClientReference,
     private val networker: ServerNetworker,
-    private val packetRegistry: ProtocolPacketRegistry,
+    private val packetRegistry: PacketRegistryImpl,
     private val clientSocket: Socket,
 ) : Runnable {
     public companion object {
         internal val LOGGER = LogManager.getLogger(ClientListener::class.java)
     }
 
-    private val incomingPackets: Offerable<ClientPacket> = networker.getSubQueue(clientReference)
-    private val outgoingPackets = LinkedBlockingQueue<ProtocolPacket>()
+    private val incomingPackets: Offerable<IncomingPacket> = networker.getSubQueue(clientReference)
+    private val outgoingPackets = LinkedBlockingQueue<OutgoingPacket>()
 
     internal var state: NetworkState = NetworkState.HANDSHAKE
     internal var isClosing = false
@@ -79,12 +80,12 @@ internal class ClientListener(
             val previousState = state
             if (packet is C2SHandshake) {
                 LOGGER.trace("potentially changing state to {}", packet.nextState)
-                clientReference.transistionToState(packet.nextState)
+                clientReference.transitionToState(packet.nextState)
             }
 
             LOGGER.trace("read packet {}", packet)
 
-            incomingPackets.put(ClientPacket(previousState, clientReference, packet))
+            incomingPackets.put(IncomingPacket(previousState, clientReference, packet))
         }
     }
 
@@ -93,10 +94,11 @@ internal class ClientListener(
         Thread.currentThread().name = "ClientListener-${addr}-Writer"
 
         while (!(clientSocket.isClosed || isClosing)) {
-            val next = outgoingPackets.take()
-            LOGGER.trace("writing packet ${next.id}")
+            LOGGER.trace("waiting for outgoing packet...")
+            val (packetState, next) = outgoingPackets.take()
+            LOGGER.trace("writing packet {}", next.id.toString(16))
 
-            val packetMaker = packetRegistry.getOutgoingMaker<ProtocolPacket>(state, next.id)
+            val packetMaker = packetRegistry.getOutgoingMaker<ProtocolPacket>(packetState, next.id)
             val buffer = Buffer()
             buffer.writeVarInt(next.id)
             packetMaker.writeOut(next, buffer)
@@ -111,11 +113,20 @@ internal class ClientListener(
             // okio internally buffers this it seems
             sink.write(buffer, buffer.size)
             sink.flush()
+
+            if (next is S2CDisconnectPlay) {
+                LOGGER.info("Disconnecting client!")
+                throw EOFException()
+            }
+
+            LOGGER.trace("successfully written and flushed packet!")
         }
     }
 
     // == api == //
     internal fun enqueueBasePacket(packet: ProtocolPacket) {
+        LOGGER.trace("adding new packet {}", packet)
+        val packet = OutgoingPacket(state, packet)
         outgoingPackets.put(packet)
     }
 

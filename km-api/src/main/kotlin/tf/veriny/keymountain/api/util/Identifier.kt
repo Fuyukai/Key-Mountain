@@ -21,6 +21,17 @@ public class Identifier(public val full: String) {
         if (!valueRegexp.matches(thing)) throw IllegalArgumentException(thing)
     }
 
+    override fun hashCode(): Int {
+        return full.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        if (other !is Identifier) return false
+
+        return other.full == full
+    }
+
 
     override fun toString(): String {
         return full

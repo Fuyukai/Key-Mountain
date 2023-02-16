@@ -19,7 +19,10 @@ public interface Registry<E : Identifiable> : Collection<E> {
     public fun get(id: Identifier): E?
 }
 
-public interface RegistryWithIds<E : Identifiable> : Registry<E> {
+/**
+ * A registry with IDs. This can be synchronised with the client so requires its own identifier.
+ */
+public interface RegistryWithIds<E : Identifiable> : Registry<E>, Identifiable {
     /**
      * Gets the internal numeric ID for this thing. This is only used for networking; you have
      * no need for this method.

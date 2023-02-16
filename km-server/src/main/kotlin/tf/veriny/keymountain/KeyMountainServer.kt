@@ -6,7 +6,7 @@ import jdk.net.ExtendedSocketOptions
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.client.ClientConnection
 import tf.veriny.keymountain.data.Data
-import tf.veriny.keymountain.network.ProtocolPacketRegistryImpl
+import tf.veriny.keymountain.network.PacketRegistryImpl
 import tf.veriny.keymountain.network.ServerNetworker
 import java.net.InetSocketAddress
 import java.net.ServerSocket
@@ -27,9 +27,6 @@ public class KeyMountainServer(public val data: Data) {
         private val LOGGER = LogManager.getLogger(KeyMountainServer::class.java)
     }
 
-    // order of initialisation matters, registries go at the top
-    public val packets: ProtocolPacketRegistryImpl = ProtocolPacketRegistryImpl()
-
     // then utilities that would otherwise need the registries
     public val networker: ServerNetworker = ServerNetworker(this)
 
@@ -46,6 +43,7 @@ public class KeyMountainServer(public val data: Data) {
     }
 
     public fun run(): Unit = Executors.newVirtualThreadPerTaskExecutor().use { mainExecutor ->
+        Thread.currentThread().name = "KeyMountain-Server-Acceptor"
         LOGGER.info("Starting KeyMountain server!")
 
         // start the various simulators

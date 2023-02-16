@@ -4,20 +4,13 @@ import tf.veriny.keymountain.api.KeyMountainException
 import tf.veriny.keymountain.api.data.KeyMountainData
 import tf.veriny.keymountain.api.data.RegistryWithIds
 import tf.veriny.keymountain.api.mod.ModKlass
+import tf.veriny.keymountain.api.network.PacketRegistry
+import tf.veriny.keymountain.api.network.PluginPacketRegistry
+import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.block.*
+import tf.veriny.keymountain.network.PacketRegistryImpl
 import kotlin.reflect.KClass
-
-private class FurnaceBlock : BlockType, WithBlockMetadata by WithBlockMetadata.Properties(
-    linkedSetOf(facing, lit)
-) {
-    companion object {
-        private val facing = DirectionProperty("facing", default = Direction.NORTH, full = false)
-        private val lit = BoolProperty("lit", default = false)
-    }
-
-    override val identifier: Identifier = Identifier("minecraft:furnace")
-}
 
 /**
  * Contains references to the various data registries used by the server.
@@ -29,7 +22,13 @@ public class Data : KeyMountainData {
     public val blockStates: BlockStateData = BlockStateData()
 
     /** Registry containing all known blocks. */
-    public override val blocks: RegistryWithIds<BlockType> = MapRegistry()
+    override val blocks: RegistryWithIds<BlockType> = MapRegistry(Identifier("minecraft:block"))
+
+    override val packets: PacketRegistryImpl = PacketRegistryImpl()
+
+    internal fun getSynchronisedRegistries(): Sequence<RegistryWithIds<*>> = sequence {
+        yield(blocks)
+    }
 
     internal fun addMod(klass: KClass<out ModKlass>, modKlass: ModKlass) {
         modInstances[klass] = modKlass

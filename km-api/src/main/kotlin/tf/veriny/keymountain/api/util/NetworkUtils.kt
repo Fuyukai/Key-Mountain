@@ -2,6 +2,7 @@ package tf.veriny.keymountain.api.util
 
 import okio.BufferedSink
 import okio.BufferedSource
+import java.util.*
 
 
 // borrowed from wiki.vg
@@ -64,6 +65,13 @@ public fun BufferedSource.readMcString(): String {
     return readUtf8(length.toLong())
 }
 
+/** Reads a single long-encoded UUID. */
+public fun BufferedSource.readUUID(): UUID {
+    val upper = readLong()
+    val lower = readLong()
+    return UUID(upper, lower)
+}
+
 /**
  * Writes a variably-encoded integer to a Sink.
  */
@@ -105,4 +113,10 @@ public fun BufferedSink.writeVarLong(toWrite: Long) {
 public fun BufferedSink.writeMcString(s: String) {
     writeVarInt(s.length)
     writeUtf8(s)
+}
+
+/** Writes a UUID to the stream. */
+public fun BufferedSink.writeUuid(u: UUID) {
+    writeLong(u.mostSignificantBits)
+    writeLong(u.leastSignificantBits)
 }
