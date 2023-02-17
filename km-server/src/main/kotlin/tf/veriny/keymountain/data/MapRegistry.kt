@@ -8,10 +8,10 @@ import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 
 internal open class MapRegistry<E : Identifiable>(override val identifier: Identifier) : RegistryWithIds<E> {
-    private var idCounter = 0
-    private val items = mutableMapOf<Identifier, E>()
-    private val idMapping = Object2IntArrayMap<Identifier>().also { it.defaultReturnValue(-1) }
-    private val reverseIdMapping = Int2ObjectArrayMap<Identifier>()
+    protected var idCounter = 0
+    protected val items = mutableMapOf<Identifier, E>()
+    protected val idMapping = Object2IntArrayMap<Identifier>().also { it.defaultReturnValue(-1) }
+    protected val reverseIdMapping = Int2ObjectArrayMap<Identifier>()
 
     // == contract methods == //
     override val size: Int get() = items.size

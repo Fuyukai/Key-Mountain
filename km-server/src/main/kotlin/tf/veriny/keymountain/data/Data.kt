@@ -3,6 +3,7 @@ package tf.veriny.keymountain.data
 import tf.veriny.keymountain.api.KeyMountainException
 import tf.veriny.keymountain.api.data.KeyMountainData
 import tf.veriny.keymountain.api.data.RegistryWithIds
+import tf.veriny.keymountain.api.data.VanillaSynchronisableRegistry
 import tf.veriny.keymountain.api.mod.ModKlass
 import tf.veriny.keymountain.api.network.PacketRegistry
 import tf.veriny.keymountain.api.network.PluginPacketRegistry
@@ -23,11 +24,10 @@ public class Data : KeyMountainData {
     /** Contains networking data about block states. */
     public val blockStates: BlockStateData = BlockStateData()
 
-    /** Registry containing all known blocks. */
     override val blocks: RegistryWithIds<BlockType> = MapRegistry(Identifier("minecraft:block"))
-    override val dimensions: RegistryWithIds<DimensionInfo> = MapRegistry(Identifier("minecraft:dimension_type"))
-
-    internal val biomeNetworkData = MapRegistry<BiomeNetworkInfo>(Identifier("minecraft:worldgen/biome"))
+    override val dimensions: VanillaSynchronisableRegistry<DimensionInfo> = VanillaSyncMapRegistry(Identifier("minecraft:dimension_type"))
+    override val biomeNetworkData: VanillaSynchronisableRegistry<BiomeNetworkInfo> =
+        VanillaSyncMapRegistry(Identifier("minecraft:worldgen/biome"))
 
     override val packets: PacketRegistryImpl = PacketRegistryImpl()
 
@@ -55,19 +55,5 @@ public class Data : KeyMountainData {
 
     init {
         blocks.register(AirBlock)
-
-        // to fucking do: actual biome data.
-        biomeNetworkData.register(BiomeNetworkInfo(
-            Identifier("minecraft:plains"),
-            precipitation = "rain",
-            downfall = 0.4f,
-            temperature = 0.8f,
-            effects = BiomeNetworkInfo.BNIEffects(
-                fogColour = 12638463,
-                skyColour = 7907327,
-                waterColour = 4159204,
-                waterFogColour = 329011,
-            )
-        ))
     }
 }

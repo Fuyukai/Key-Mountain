@@ -6,11 +6,13 @@ import okio.Buffer
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.KeyMountainServer
 import tf.veriny.keymountain.api.client.ClientReference
+import tf.veriny.keymountain.api.data.VanillaSynchronisableRegistry
 import tf.veriny.keymountain.api.network.NetworkState.*
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.packets.*
 import tf.veriny.keymountain.api.network.plugin.BidiBrand
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
+import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.util.writeMcString
 import tf.veriny.keymountain.api.world.GameMode
@@ -24,7 +26,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
     }
 
     private val incoming = LinkedBlockingMultiQueue<ClientReference, IncomingPacket>()
-    private val syncher = RegistrySyncher(server.data, this)
+    private val syncher = QuiltRegistrySyncher(server.data, this)
 
     /** Adds a new client sub-queue. */
     internal fun getSubQueue(ref: ClientReference): Offerable<IncomingPacket> {
@@ -130,8 +132,8 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             entityId = 0,
             isHardcore = false,
             gameMode = GameMode.SURVIVAL,
-            dimensionRegistry = server.data.dimensions,
-            biomeRegistry = server.data.biomeNetworkData,
+            dimensionIds = server.data.dimensions.getAllEntries().map { it.identifier },
+            synchronisedRegisteries = listOf(server.data.dimensions, server.data.biomeNetworkData) as List<VanillaSynchronisableRegistry<Identifiable>>,
             dimensionType = "minecraft:overworld",
             viewDistance = 12, clientRenderDistance = 7,
             enableRespawn = false, isFlat = true

@@ -3,6 +3,7 @@ package tf.veriny.keymountain.api.data
 import tf.veriny.keymountain.api.mod.ModKlass
 import tf.veriny.keymountain.api.network.PluginPacketRegistry
 import tf.veriny.keymountain.api.world.DimensionInfo
+import tf.veriny.keymountain.api.world.biome.BiomeNetworkInfo
 import tf.veriny.keymountain.api.world.block.BlockType
 import kotlin.reflect.KClass
 
@@ -11,11 +12,9 @@ import kotlin.reflect.KClass
  * method
  */
 public interface KeyMountainData {
-    /** The registry for blocks. */
     public val blocks: RegistryWithIds<BlockType>
-
-    /** The registry for dimensions. */
-    public val dimensions: RegistryWithIds<DimensionInfo>
+    public val dimensions: VanillaSynchronisableRegistry<DimensionInfo>
+    public val biomeNetworkData: VanillaSynchronisableRegistry<BiomeNetworkInfo>
 
     /** The registry for plugin channel packets. */
     public val packets: PluginPacketRegistry

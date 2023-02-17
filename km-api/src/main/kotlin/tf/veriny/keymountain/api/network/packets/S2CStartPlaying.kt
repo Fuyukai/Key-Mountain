@@ -2,13 +2,17 @@ package tf.veriny.keymountain.api.network.packets
 
 import com.dyescape.dataformat.nbt.databind.NBTMapper
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import okio.Buffer
 import tf.veriny.keymountain.api.data.Registry
 import tf.veriny.keymountain.api.data.RegistryWithIds
+import tf.veriny.keymountain.api.data.VanillaSynchronisableRegistry
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.ProtocolPacketSerialiser
+import tf.veriny.keymountain.api.util.Identifiable
+import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.util.writeMcString
 import tf.veriny.keymountain.api.util.writeVarInt
 import tf.veriny.keymountain.api.world.DimensionInfo
@@ -25,9 +29,10 @@ public class S2CStartPlaying(
     public val entityId: Int,
     public val isHardcore: Boolean,
     public val gameMode: GameMode,
+    // not sure how this differs from the registry...
+    public val dimensionIds: List<Identifier>,
+    public val synchronisedRegisteries: List<VanillaSynchronisableRegistry<Identifiable>>,
     // the client expects a few more but we don't send them!
-    public val dimensionRegistry: RegistryWithIds<DimensionInfo>,
-    public val biomeRegistry: RegistryWithIds<BiomeNetworkInfo>,
     // the one being spawned into
     public val dimensionType: String,
 
@@ -36,27 +41,11 @@ public class S2CStartPlaying(
     public val enableRespawn: Boolean,
     public val isFlat: Boolean,
 ) : ProtocolPacket {
-    private data class StupidNBTRegistry(
-        @JsonProperty("minecraft:dimension_type")
-        val dimensionTypeRegistry: DimensionTypeRegistry,
-        @JsonProperty("minecraft:worldgen/biome")
-        val biomeRegistry: BiomeTypeRegistry,
-    )
-
-    private data class DimensionTypeRegistry(
+    private data class RegistryEntries(
         val type: String,
-        @JsonSerialize(contentAs = RegistryEntry::class)
-        val value: List<RegistryEntry>
-    ) {
-        data class RegistryEntry(val name: String, val id: Int, val element: DimensionInfo)
-    }
-
-    private data class BiomeTypeRegistry(
-        val type: String,
-        @JsonSerialize(contentAs = RegistryEntry::class)
         val value: List<RegistryEntry>,
     ) {
-        data class RegistryEntry(val name: String, val id: Int, val element: BiomeNetworkInfo)
+        data class RegistryEntry(val name: String, val id: Int, val element: Any)
     }
 
     public companion object : ProtocolPacketSerialiser<S2CStartPlaying> {
@@ -75,29 +64,23 @@ public class S2CStartPlaying(
             // hardcoded: previous gamemode
             data.writeByte(-1)
 
-            val dimensionIds = packet.dimensionRegistry.map { it.identifier }
-            data.writeVarInt(dimensionIds.size)
-            for (id in dimensionIds) {
+            data.writeVarInt(packet.dimensionIds.size)
+            for (id in packet.dimensionIds) {
                 data.writeMcString(id.full)
             }
 
-            val dimEntries = mutableListOf<DimensionTypeRegistry.RegistryEntry>()
-            for (info in packet.dimensionRegistry) {
-                val id = packet.dimensionRegistry.getNumericId(info)
-                dimEntries.add(DimensionTypeRegistry.RegistryEntry(info.identifier.full, id, info))
+            val registryData: MutableMap<String, RegistryEntries> = object : HashMap<String, RegistryEntries>() {}
+
+            for (registry in packet.synchronisedRegisteries) {
+                val entries = mutableListOf<RegistryEntries.RegistryEntry>()
+                for (thing in registry.getAllEntries()) {
+                    val id = registry.getNumericId(thing)
+                    entries.add(RegistryEntries.RegistryEntry(thing.identifier.full, id, thing))
+                }
+                registryData[registry.identifier.full] = RegistryEntries(registry.identifier.full, entries)
             }
 
-            val biomeEntries = mutableListOf<BiomeTypeRegistry.RegistryEntry>()
-            for (info in packet.biomeRegistry) {
-                val id = packet.biomeRegistry.getNumericId(info)
-                biomeEntries.add(BiomeTypeRegistry.RegistryEntry(info.identifier.full, id, info))
-            }
-
-            val nbtData = StupidNBTRegistry(
-                DimensionTypeRegistry("minecraft:dimension_type", dimEntries),
-                BiomeTypeRegistry("minecraft:worldgen/biome", biomeEntries)
-            )
-            val rawNbt = nbtMapper.writeValueAsBytes(nbtData)
+            val rawNbt = nbtMapper.writeValueAsBytes(registryData)
             data.write(rawNbt)
 
             // dimension type and name, but we use the same value for both

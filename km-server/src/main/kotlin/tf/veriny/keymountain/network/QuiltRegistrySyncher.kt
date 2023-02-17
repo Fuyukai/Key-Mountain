@@ -91,18 +91,18 @@ public class S2CRegistrySyncStart(
 //    3) S->C Registry Apply
 //
 // The client is submissive in this state and doesn't send anything. If everything completes fine,
-// then we won't receive anything and will just be disconnected; instead, we send a Ping(2) frame
+// then we won't receive anything from the client; instead, we send a Ping(2) frame
 // after everything to signal to the server code that the client is ready to continue logging in.
 
 /**
  * Synchronises registries between ourselves and the Minecraft client.
  */
-public class RegistrySyncher(
+public class QuiltRegistrySyncher(
     private val data: Data,
     private val networker: ServerNetworker
 ) {
     private companion object {
-        val LOGGER: Logger = LogManager.getLogger(RegistrySyncher::class.java)
+        val LOGGER: Logger = LogManager.getLogger(QuiltRegistrySyncher::class.java)
         val REGISTRY_DATA_ID = Identifier("qsl:registry_sync/registry_data")
         val REGISTRY_DATA_APPLY = Identifier("qsl:registry_sync/registry_apply")
 

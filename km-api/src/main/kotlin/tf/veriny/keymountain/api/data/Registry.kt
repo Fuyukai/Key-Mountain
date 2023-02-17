@@ -32,3 +32,11 @@ public interface RegistryWithIds<E : Identifiable> : Registry<E>, Identifiable {
 
     public fun getThingFromId(id: Int): E
 }
+
+/**
+ * A registry that can be synchronised with the vanilla synchronisation mechanism (the sucky one).
+ * All other [RegistryWithIds] instances can be synchronised with the Quilt protocol.
+ */
+public interface VanillaSynchronisableRegistry<E : Identifiable> : RegistryWithIds<E> {
+    public fun getAllEntries(): List<Identifiable>
+}
