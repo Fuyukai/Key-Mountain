@@ -8,6 +8,7 @@ import tf.veriny.keymountain.api.network.PacketRegistry
 import tf.veriny.keymountain.api.network.PluginPacketRegistry
 import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
+import tf.veriny.keymountain.api.world.DimensionInfo
 import tf.veriny.keymountain.api.world.block.*
 import tf.veriny.keymountain.network.PacketRegistryImpl
 import kotlin.reflect.KClass
@@ -23,6 +24,7 @@ public class Data : KeyMountainData {
 
     /** Registry containing all known blocks. */
     override val blocks: RegistryWithIds<BlockType> = MapRegistry(Identifier("minecraft:block"))
+    override val dimensions: RegistryWithIds<DimensionInfo> = MapRegistry(Identifier("minecraft:dimensions"))
 
     override val packets: PacketRegistryImpl = PacketRegistryImpl()
 
