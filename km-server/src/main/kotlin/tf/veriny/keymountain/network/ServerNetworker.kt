@@ -2,6 +2,7 @@ package tf.veriny.keymountain.network
 
 import lbmq.LinkedBlockingMultiQueue
 import lbmq.Offerable
+import okio.Buffer
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.KeyMountainServer
 import tf.veriny.keymountain.api.client.ClientReference
@@ -9,6 +10,9 @@ import tf.veriny.keymountain.api.network.NetworkState.*
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.packets.*
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
+import tf.veriny.keymountain.api.util.Identifier
+import tf.veriny.keymountain.api.util.writeMcString
+import tf.veriny.keymountain.api.world.GameMode
 
 /**
  * Routes incoming packets from clients and updates the server state appropriately.
@@ -111,7 +115,28 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             // ???
             LOGGER.error("Client sent an unsolicited pong packet...?")
             ref.enqueueProtocolPacket(S2CDisconnectPlay("\"Don't care + Didn't ask + L + Ratio\""))
+            return
         }
+
+        // send all the various play packets
+        val startPlaying = S2CStartPlaying(
+            entityId = 0,
+            isHardcore = false,
+            gameMode = GameMode.SURVIVAL,
+            dimensionRegistry = server.data.dimensions,
+            biomeRegistry = server.data.biomeNetworkData,
+            dimensionType = "minecraft:overworld",
+            viewDistance = 12, clientRenderDistance = 7,
+            enableRespawn = false, isFlat = true
+        )
+        ref.enqueueProtocolPacket(startPlaying)
+
+        val brandPacket = S2CPluginMessage(Identifier("minecraft:brand"), Buffer().also { it.writeMcString("key-mountain") })
+        ref.enqueueProtocolPacket(brandPacket)
+    }
+
+    private fun handleClientInformationPacket(ref: ClientReference, packet: C2SClientInformation) {
+        LOGGER.debug("client {}'s settings: {}", ref.loginInfo.username, packet)
     }
 
     init {
@@ -128,9 +153,12 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
 
         packets.addIncomingPacket(PLAY, C2SPluginMessage.PACKET_ID, C2SPluginMessage, ::handlePluginMessagePacket)
         packets.addIncomingPacket(PLAY, C2SPong.PACKET_ID, C2SPong, ::handlePongPacket)
+        packets.addIncomingPacket(PLAY, C2SClientInformation.PACKET_ID, C2SClientInformation, ::handleClientInformationPacket)
+
         packets.addOutgoingPacket(PLAY, S2CPing.PACKET_ID, S2CPing)
         packets.addOutgoingPacket(PLAY, S2CPluginMessage.PACKET_ID, S2CPluginMessage)
         packets.addOutgoingPacket(PLAY, S2CDisconnectPlay.PACKET_ID, S2CDisconnectPlay)
+        packets.addOutgoingPacket(PLAY, S2CStartPlaying.PACKET_ID, S2CStartPlaying)
 
         syncher.setupPacketHandlers(packets)
     }

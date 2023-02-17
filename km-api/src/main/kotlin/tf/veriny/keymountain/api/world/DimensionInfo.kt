@@ -23,7 +23,7 @@ public data class DimensionInfo(
     /**
      * The maximum height that blocks can be placed in this dimension. This should be a multiple of 16.
      */
-    @JsonIgnore
+    @JsonProperty("height")
     public val maxHeight: Int,
 
     /**
@@ -88,6 +88,7 @@ public data class DimensionInfo(
      * The maximum height that teleporting items and entities can put the player in this dimension.
      * Cannot be higher than maxHeight.
      */
+    @JsonProperty("logical_height")
     public val maximumTeleportingHeight: Int = maxHeight - minHeight - 16,  // arbitrary
 
 ) : Identifiable {
@@ -103,8 +104,6 @@ public data class DimensionInfo(
     }
 
     // automatically generated based on the other properties
-    @get:JsonProperty("height")
-    public val totalHeight: Int get() = maxHeight - minHeight + 1
     @get:JsonProperty("piglin_safe")
     public val piglinSafe: Boolean get() = true
     @get:JsonProperty("bed_works")
@@ -116,5 +115,7 @@ public data class DimensionInfo(
     @get:JsonProperty("infiniburn")
     public val infiniteBurnTag: String get() = "#"
     @get:JsonProperty("effects")
-    public val effects: String get() = "overworld"
+    public val effects: String get() = "minecraft:overworld"
+    @get:JsonProperty("ambient_light")
+    public val ambientLight: Float = 1.0F
 }

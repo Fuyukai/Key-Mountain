@@ -2,6 +2,7 @@ package tf.veriny.keymountain.world
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import lbmq.LinkedBlockingMultiQueue
+import tf.veriny.keymountain.api.world.DimensionInfo
 import tf.veriny.keymountain.api.world.block.BlockType
 import tf.veriny.keymountain.api.world.block.WorldPosition
 import tf.veriny.keymountain.data.Data
@@ -11,7 +12,7 @@ import kotlin.concurrent.read
 /**
  * A single simulated world. A world contains a (near-infinite) amount of chunk sections.
  */
-public class World(private val data: Data) : Runnable {
+public class World(private val data: Data, public val dimensionInfo: DimensionInfo) : Runnable {
     // map of (Cx << 32) | Cz => chunk section
     // probably not the best structure, but
     private val chunks = Long2ObjectOpenHashMap<ChunkSection>()
@@ -28,7 +29,7 @@ public class World(private val data: Data) : Runnable {
         val pos = (chunkX.shl(32)).or(chunkZ)
 
         val chunkSection = chunks.get(pos) ?: return null
-        val y = at.y / 16
+        val y = (at.y - dimensionInfo.minHeight) / 16
         return chunkSection.chunks[y]
     }
 

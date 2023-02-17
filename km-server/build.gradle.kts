@@ -8,12 +8,4 @@ dependencies {
 
     // used in the server networker
     implementation("com.github.marianobarrios:linked-blocking-multi-queue:0.4.0")
-
-    // lol imaggine sending json over the wire in a binary protocol
-    implementation("com.fasterxml.jackson.core:jackson-core:2.14.2")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.14.2")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.14.2")
-
-    // TODO: rewrite this by ourselvees, rather than depending on someonee elses impl
-    implementation("com.dyescape:jackson-dataformat-nbt:1.0")
 }

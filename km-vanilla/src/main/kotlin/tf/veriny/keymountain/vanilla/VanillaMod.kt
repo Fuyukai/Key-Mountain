@@ -22,7 +22,7 @@ public class VanillaMod(private val data: KeyMountainData) : ModKlass {
 
         val overworld = DimensionInfo(
             Identifier("minecraft:overworld"),
-            0, 512
+            512, 0
         )
         data.dimensions.register(overworld)
     }

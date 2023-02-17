@@ -9,6 +9,7 @@ import tf.veriny.keymountain.api.network.PluginPacketRegistry
 import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.DimensionInfo
+import tf.veriny.keymountain.api.world.biome.BiomeNetworkInfo
 import tf.veriny.keymountain.api.world.block.*
 import tf.veriny.keymountain.network.PacketRegistryImpl
 import kotlin.reflect.KClass
@@ -24,7 +25,9 @@ public class Data : KeyMountainData {
 
     /** Registry containing all known blocks. */
     override val blocks: RegistryWithIds<BlockType> = MapRegistry(Identifier("minecraft:block"))
-    override val dimensions: RegistryWithIds<DimensionInfo> = MapRegistry(Identifier("minecraft:dimensions"))
+    override val dimensions: RegistryWithIds<DimensionInfo> = MapRegistry(Identifier("minecraft:dimension_type"))
+
+    internal val biomeNetworkData = MapRegistry<BiomeNetworkInfo>(Identifier("minecraft:worldgen/biome"))
 
     override val packets: PacketRegistryImpl = PacketRegistryImpl()
 
@@ -52,5 +55,19 @@ public class Data : KeyMountainData {
 
     init {
         blocks.register(AirBlock)
+
+        // to fucking do: actual biome data.
+        biomeNetworkData.register(BiomeNetworkInfo(
+            Identifier("minecraft:plains"),
+            precipitation = "rain",
+            downfall = 0.4f,
+            temperature = 0.8f,
+            effects = BiomeNetworkInfo.BNIEffects(
+                fogColour = 12638463,
+                skyColour = 7907327,
+                waterColour = 4159204,
+                waterFogColour = 329011,
+            )
+        ))
     }
 }

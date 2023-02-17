@@ -3,7 +3,7 @@
     <Appenders>
         <Console name="ConsoleAppender" target="SYSTEM_ERR" follow="true">
             <PatternLayout
-                    pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{${LOG_LEVEL_PATTERN:-%5p}}{FATAL=red, ERROR=red, WARN=yellow, INFO=green, DEBUG=green, TRACE=green} %style{%pid}{magenta} --- [%t] %style{%-10.40c{1.}}{cyan} : %m%n%ex"/>
+                    pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %highlight{${LOG_LEVEL_PATTERN:-%5p}}{FATAL=red, ERROR=red, WARN=yellow, INFO=green, DEBUG=green, TRACE=green} --- [%t] %style{%-10.40c{1.}}{cyan} : %m%n%ex"/>
         </Console>
     </Appenders>
     <Loggers>
