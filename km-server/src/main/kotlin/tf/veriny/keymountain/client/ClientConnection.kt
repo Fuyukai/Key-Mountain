@@ -62,8 +62,11 @@ public class ClientConnection(
         network.state = state
     }
 
-    override fun enqueueProtocolPacket(packet: ProtocolPacket): Unit =
-        network.enqueueBasePacket(packet)
+    override fun enqueueProtocolPacket(packet: ProtocolPacket): Unit {
+        if (stillReceivingPackets) {
+            network.enqueueBasePacket(packet)
+        }
+    }
 
     override fun enqueuePluginPacket(packet: PluginPacket) {
         // auto-wrap it so that the networker writer doesn't have to care

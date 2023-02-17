@@ -1,5 +1,6 @@
 package tf.veriny.keymountain.data
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap
 import tf.veriny.keymountain.api.KeyMountainException
 import tf.veriny.keymountain.api.data.RegistryWithIds
@@ -10,6 +11,7 @@ internal open class MapRegistry<E : Identifiable>(override val identifier: Ident
     private var idCounter = 0
     private val items = mutableMapOf<Identifier, E>()
     private val idMapping = Object2IntArrayMap<Identifier>().also { it.defaultReturnValue(-1) }
+    private val reverseIdMapping = Int2ObjectArrayMap<Identifier>()
 
     // == contract methods == //
     override val size: Int get() = items.size
@@ -30,6 +32,7 @@ internal open class MapRegistry<E : Identifiable>(override val identifier: Ident
         // only update ID if nothing was registered before to avoid gaps
         if (previous == null) {
             idMapping.put(item.identifier, idCounter++)
+            reverseIdMapping.put(idCounter, item.identifier)
         }
 
         return previous
@@ -44,6 +47,13 @@ internal open class MapRegistry<E : Identifiable>(override val identifier: Ident
             throw KeyMountainException("no ID for '${thing.identifier}'")
         }
         return id
+    }
+
+    override fun getThingFromId(id: Int): E {
+        val identifier = reverseIdMapping.get(id)
+                         ?: throw KeyMountainException("no such thing for id '$id'")
+
+        return get(identifier)!!
     }
 
 }

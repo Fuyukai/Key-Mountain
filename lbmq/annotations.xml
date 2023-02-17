@@ -1,0 +1,5 @@
+<root>
+    <item name='lbmq.LinkedBlockingMultiQueue E poll()'>
+        <annotation name='org.jetbrains.annotations.Nullable'/>
+    </item>
+</root>

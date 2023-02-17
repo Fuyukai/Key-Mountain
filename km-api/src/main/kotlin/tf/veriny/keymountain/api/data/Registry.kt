@@ -4,7 +4,8 @@ import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 
 /**
- * A holder of things that can be uniquely identified. This acts as a collection over the
+ * A holder of things that can be uniquely identified. This acts as a collection over the items
+ * within, but not a mutable collection (use [register]) for that.
  */
 public interface Registry<E : Identifiable> : Collection<E> {
     /**
@@ -28,4 +29,6 @@ public interface RegistryWithIds<E : Identifiable> : Registry<E>, Identifiable {
      * no need for this method.
      */
     public fun getNumericId(thing: E): Int
+
+    public fun getThingFromId(id: Int): E
 }

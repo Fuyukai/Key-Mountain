@@ -28,6 +28,13 @@ public class BlockStateData {
         data.clear()
     }
 
+    /** Loads the generated block state ID for a block id + metadata combination. */
+    public fun getBlockStateId(fullId: Long): Int {
+        val id = (fullId.shr(32)).toInt()
+        val metadata = fullId.toInt()
+        return data[id][metadata]
+    }
+
     internal fun printStates(blockType: BlockType, id: Int) {
         val md = BlockMetadata(blockType.properties)
 
