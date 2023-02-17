@@ -8,5 +8,8 @@ dependencies {
 
     // todo: vaporise this, dont need these webshit-esque deps
     api("com.github.f4b6a3:uuid-creator:5.2.0")
+
+    api("com.fasterxml.jackson.core:jackson-annotations:2.14.2")
+
 }
 val compileKotlin: KotlinCompile by tasks

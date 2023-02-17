@@ -73,7 +73,7 @@ subprojects {
                     "-Xassertions=always-enable",  // Forcibly enable assertions
                     "-Xlambdas=indy",  // Forcibly use invokedynamic for all lambdas.
                 )
-                jvmTarget = "17"
+                jvmTarget = "19"
             }
         }
 
