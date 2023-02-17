@@ -9,6 +9,7 @@ import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.network.NetworkState.*
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.packets.*
+import tf.veriny.keymountain.api.network.plugin.BidiBrand
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.util.writeMcString
@@ -36,6 +37,11 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         // thread-safe as LBMQ releases the lock via conditions
         LOGGER.trace("removing subqueue for {}", ref)
         incoming.removeSubQueue(ref)
+    }
+
+    // == Misc == //
+    private fun handleBrandPacket(ref: ClientReference, packet: BidiBrand) {
+        LOGGER.debug("Client ${ref.loginInfo.username} is using client '${packet.brand}'")
     }
 
     // == Handshake == //
@@ -94,7 +100,8 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
 
         val serialiser = server.data.packets.getIncomingPluginMaker<PluginPacket>(packet.channel)
         if (serialiser == null) {
-            LOGGER.warn("Received unrecognised plugin message {}!", packet.channel)
+            val body = packet.data.readByteString()
+            LOGGER.warn("Received unrecognised plugin message {}! (body: {})", packet.channel, body.base64())
             return
         }
 
@@ -159,6 +166,9 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addOutgoingPacket(PLAY, S2CPluginMessage.PACKET_ID, S2CPluginMessage)
         packets.addOutgoingPacket(PLAY, S2CDisconnectPlay.PACKET_ID, S2CDisconnectPlay)
         packets.addOutgoingPacket(PLAY, S2CStartPlaying.PACKET_ID, S2CStartPlaying)
+
+        packets.addIncomingPacket(BidiBrand.ID, BidiBrand, ::handleBrandPacket)
+        packets.addOutgoingPacket(BidiBrand.ID, BidiBrand)
 
         syncher.setupPacketHandlers(packets)
     }
