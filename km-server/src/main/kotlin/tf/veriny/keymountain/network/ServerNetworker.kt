@@ -145,7 +145,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         // spawn the player
         val world = server.worlds.first()
         val playerEntity = world.spawnEntity(PlayerEntity, WorldPosition(0, 0, 128), null)
-        (ref as ClientConnection).entity = playerEntity
+        ref.entity = playerEntity
 
         // send all the various play packets
         val startPlaying = S2CStartPlaying(

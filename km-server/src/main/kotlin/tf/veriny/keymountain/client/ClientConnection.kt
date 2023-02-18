@@ -70,7 +70,6 @@ public class ClientConnection(
         private set
 
     override var entity: PlayerEntity? = null
-        internal set
 
     override fun changeLoginInfo(uuid: UUID, username: String): ClientInfo {
         loginInfo = ClientInfo(uuid, username)

@@ -29,7 +29,7 @@ public interface ClientReference {
     public val loginInfo: ClientInfo
 
     /** The entity that represents this player. */
-    public val entity: PlayerEntity?
+    public var entity: PlayerEntity?
 
     /**
      * Changes the login info for this client. Normally only called after launch.
@@ -38,6 +38,7 @@ public interface ClientReference {
 
     /** Changes the state of this client reference to the specified network state. */
     public fun transitionToState(state: NetworkState)
+
 
     /**
      * Enqueues a single base packet for later sending to the client. This will be sent out using
