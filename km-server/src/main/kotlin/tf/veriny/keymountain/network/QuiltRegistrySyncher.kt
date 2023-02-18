@@ -117,9 +117,8 @@ public class QuiltRegistrySyncher(
     private fun handleHandshake(ref: ClientReference, packet: C2SRegistrySyncHandshake) {
         LOGGER.trace("client is telling us that they support version {}", packet.supportedVersion)
         if (packet.supportedVersion != version) {
-            LOGGER.error("Client {} does not speak our language, keeping them safe", ref.loginInfo)
-            ref.enqueueProtocolPacket(S2CDisconnectPlay("\"You should kill yourself... now!\""))
-            return
+            LOGGER.error("Client {} does not speak our language?", ref.loginInfo)
+            return ref.die("You should kill yourself... now!")
         }
 
         for (registry in data.getSynchronisedRegistries()) {

@@ -32,4 +32,15 @@ public interface World {
     public fun <D : EntityData, E : Entity<D, E>> spawnEntity(
         entityType: EntityType<D, E>, pos: WorldPosition, data: D?
     ): E
+
+    /**
+     * Gets a single entity in this world by entity ID.
+     */
+    public fun <E : Entity<*, E>> getEntity(id: Int): E?
+
+    /**
+     * Removes a single entity by entity ID. Returns the entity removed, or null if it did not
+     * exist.
+     */
+    public fun <E : Entity<*, E>> removeEntity(id: Int): E?
 }

@@ -9,12 +9,23 @@ import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
+import tf.veriny.keymountain.api.network.packets.S2CDisconnectPlay
 import tf.veriny.keymountain.api.network.packets.S2CPluginMessage
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
 import tf.veriny.keymountain.network.ClientListener
 import java.io.EOFException
 import java.net.Socket
 import java.util.*
+
+// notes on closure
+// 1) die() sends a disconnection message to the client which will (eventually) be processed by
+//    the socket writer
+// 2a) when the socket writer sees the disconnection message, it'll kill both the reader/writer tasks
+// 2b) the socket writer has a timeout of 30s, after which it will fail without a timeout exception
+// 3) when the tasks eventually finish, then the socket is closed and the server cleans up the player.
+//
+// cleanup is done in the finally block and never the die() method for consistency in the case of
+// protocol errors.
 
 /**
  * A single, connected client.
@@ -87,12 +98,13 @@ public class ClientConnection(
         network.enqueueBasePacket(basePacket)
     }
 
-    override fun close() {
-        socket.close()
+    override fun die(message: String) {
+        network.enqueueBasePacket(S2CDisconnectPlay("\"$message\""))
+        network.isClosing = true
     }
 
     // == runnable == //
-    override fun run() {
+    override fun run(): Unit = socket.use {
         try {
             LOGGER.trace("starting fresh client listener")
             network.run()
@@ -106,6 +118,12 @@ public class ClientConnection(
                 LOGGER.debug("Client disconnected")
             }
         } finally {
+            val entity = this.entity
+            if (entity != null) {
+                server.removePlayer(entity)
+            }
+
+            network.isClosing = true
             server.networker.removeSubQueue(this)
         }
     }

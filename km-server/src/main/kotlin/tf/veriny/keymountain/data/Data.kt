@@ -33,6 +33,7 @@ public class Data : KeyMountainData {
 
     internal fun getSynchronisedRegistries(): Sequence<RegistryWithIds<*>> = sequence {
         yield(blocks)
+        yield(entityTypes)
     }
 
     internal fun addMod(klass: KClass<out ModKlass>, modKlass: ModKlass) {

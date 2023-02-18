@@ -126,8 +126,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         } else {
             // ???
             LOGGER.error("Client sent an unsolicited pong packet...?")
-            ref.enqueueProtocolPacket(S2CDisconnectPlay("\"Don't care + Didn't ask + L + Ratio\""))
-            return
+            return ref.die("Don't care + didn't ask")
         }
 
         // spawn the player
@@ -137,7 +136,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
 
         // send all the various play packets
         val startPlaying = S2CStartPlaying(
-            entityId = 0,
+            entityId = playerEntity.uniqueId,
             isHardcore = false,
             gameMode = GameMode.SURVIVAL,
             dimensionIds = server.data.dimensions.getAllEntries().map { it.identifier },
@@ -148,8 +147,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         )
         ref.enqueueProtocolPacket(startPlaying)
 
-        val brandPacket = S2CPluginMessage(Identifier("minecraft:brand"), Buffer().also { it.writeMcString("key-mountain") })
-        ref.enqueueProtocolPacket(brandPacket)
+        ref.enqueuePluginPacket(BidiBrand("key-mountain"))
 
         val setSpawnPosition = S2CSetSpawnPosition(WorldPosition(0, 0, 128), 0f)
         ref.enqueueProtocolPacket(setSpawnPosition)
@@ -171,8 +169,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         val entity = ref.entity
         if (entity == null) {
             LOGGER.error("client sent a set player position before they exist??")
-            ref.enqueueProtocolPacket(S2CDisconnectPlay("\"No\""))
-            return
+            return ref.die("Illegal move packet")
         } else {
             LOGGER.trace("player sent position: ({}, {}, {})", packet.x, packet.z, packet.feetY)
         }
@@ -245,7 +242,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             } catch (e: Exception) {
                 // TODO: better kill logic
                 LOGGER.error("Error in protocol packet processing!", e)
-                next.ref.close()
+                next.ref.die("Internal server error")
             }
         }
     }

@@ -48,5 +48,5 @@ public interface ClientReference {
     /**
      * Closes this client's connection and removes them from the server.
      */
-    public fun close()
+    public fun die(message: String = "Disconnected")
 }

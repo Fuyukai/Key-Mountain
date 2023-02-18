@@ -40,10 +40,6 @@ internal class ClientListener(
     private val sink = clientSocket.sink().buffer()
     private val source = clientSocket.source().buffer()
 
-    private fun close() {
-
-    }
-
     /**
      * Constantly loops over incoming packets and pushes them to the ``incomingPackets`` queue.
      */
@@ -116,6 +112,7 @@ internal class ClientListener(
 
             if (next is S2CDisconnectPlay) {
                 LOGGER.info("Disconnecting client!")
+                isClosing = true
                 throw EOFException()
             }
 
@@ -132,14 +129,12 @@ internal class ClientListener(
 
     override fun run() {
         LOGGER.debug("Starting client listener for {}", clientSocket.remoteSocketAddress)
-        clientSocket.use {
-            StructuredTaskScope.ShutdownOnFailure().use {
-                it.fork(::runSocketReader)
-                it.fork(::runSocketWriter)
+        StructuredTaskScope.ShutdownOnFailure().use {
+            it.fork(::runSocketReader)
+            it.fork(::runSocketWriter)
 
-                it.join()
-                it.throwIfFailed()
-            }
+            it.join()
+            it.throwIfFailed()
         }
     }
 }

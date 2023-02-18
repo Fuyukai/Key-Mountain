@@ -131,6 +131,15 @@ public class WorldImpl(
         return entity
     }
 
+    // todo: type safety I guess?
+    override fun <E : Entity<*, E>> getEntity(id: Int): E? {
+        return knownEntites[id] as E?
+    }
+
+    override fun <E : Entity<*, E>> removeEntity(id: Int): E? {
+        return knownEntites.remove(id) as E?
+    }
+
     override fun run() {
         Thread.currentThread().name = "KeyMountain-WorldSim-Overworld"
 

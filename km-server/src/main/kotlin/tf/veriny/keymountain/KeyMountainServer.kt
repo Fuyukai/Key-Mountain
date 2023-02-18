@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import jdk.net.ExtendedSocketOptions
 import org.apache.logging.log4j.LogManager
+import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.client.ClientConnection
@@ -47,10 +48,21 @@ public class KeyMountainServer(public val data: Data) {
         executor.execute(client)
     }
 
+    /**
+     * Removes a player from the current server.
+     */
+    public fun removePlayer(player: PlayerEntity) {
+        // TODO: broadcast to other players...
+        for (world in worlds) {
+            world.removeEntity<PlayerEntity>(player.uniqueId)
+        }
+    }
+
     public fun run(): Unit = Executors.newVirtualThreadPerTaskExecutor().use { mainExecutor ->
-        Thread.currentThread().name = "KeyMountain-Server-Acceptor"
         val worlds = this.worlds as MutableList<World>
         worlds.add(WorldImpl.generatedWorld(this, data.dimensions.get(Identifier("minecraft:overworld"))!!))
+
+        Thread.currentThread().name = "KeyMountain-Server-Acceptor"
 
         LOGGER.info("Starting KeyMountain server!")
 
