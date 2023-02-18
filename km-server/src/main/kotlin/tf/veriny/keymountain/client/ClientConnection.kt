@@ -89,6 +89,10 @@ public class ClientConnection(
             throw IllegalPacketException("Cannot transition to PLAY state from non-LOGIN state")
         }
 
+        if (state == NetworkState.PLAY) {
+            network.startSendingKeepAlives()
+        }
+
         network.state = state
     }
 

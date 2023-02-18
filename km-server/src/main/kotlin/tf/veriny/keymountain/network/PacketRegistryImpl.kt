@@ -18,6 +18,8 @@ package tf.veriny.keymountain.network
 
 import tf.veriny.keymountain.api.NoSuchPacketException
 import tf.veriny.keymountain.api.network.*
+import tf.veriny.keymountain.api.network.packets.C2SKeepAlive
+import tf.veriny.keymountain.api.network.packets.S2CKeepAlive
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
 import tf.veriny.keymountain.api.network.plugin.PluginPacketAction
 import tf.veriny.keymountain.api.network.plugin.PluginPacketSerialiser
@@ -127,5 +129,10 @@ public class PacketRegistryImpl : PacketRegistry {
     public fun <T : PluginPacket> getPluginAction(id: Identifier): PluginPacketAction<T>? {
         val (_, action) = incomingPluginPackets[id] ?: return null
         return action as PluginPacketAction<T>
+    }
+
+    init {
+        addIncomingPacket(NetworkState.PLAY, C2SKeepAlive.PACKET_ID, C2SKeepAlive) { _, _, -> }
+        addOutgoingPacket(NetworkState.PLAY, S2CKeepAlive.PACKET_ID, S2CKeepAlive)
     }
 }

@@ -28,25 +28,34 @@ import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.packets.C2SHandshake
+import tf.veriny.keymountain.api.network.packets.C2SKeepAlive
 import tf.veriny.keymountain.api.network.packets.S2CDisconnectPlay
+import tf.veriny.keymountain.api.network.packets.S2CKeepAlive
 import tf.veriny.keymountain.api.util.readVarInt
 import tf.veriny.keymountain.api.util.writeVarInt
+import tf.veriny.keymountain.client.ClientConnection
 import java.io.EOFException
 import java.net.Socket
+import java.security.SecureRandom
+import java.time.Duration
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import kotlin.random.asKotlinRandom
 
 /**
  * Handles incoming connections from a client.
  */
 internal class ClientListener(
-    private val clientReference: ClientReference,
+    private val clientReference: ClientConnection,
     private val networker: ServerNetworker,
     private val packetRegistry: PacketRegistryImpl,
     private val clientSocket: Socket,
 ) : Runnable {
     public companion object {
         internal val LOGGER = LogManager.getLogger(ClientListener::class.java)
+
+        private val secure = SecureRandom.getInstanceStrong().asKotlinRandom()
     }
 
     private val incomingPackets: Offerable<IncomingPacket> = networker.getSubQueue(clientReference)
@@ -57,6 +66,27 @@ internal class ClientListener(
 
     private val sink = clientSocket.sink().buffer()
     private val source = clientSocket.source().buffer()
+
+    private val keepAliveLatch = CountDownLatch(1)
+
+    private val keepAliveQueue = ArrayDeque<Long>()
+
+    internal fun startSendingKeepAlives() {
+        keepAliveLatch.countDown()
+    }
+
+    private fun runKeepAlive() {
+        Thread.currentThread().name = "ClientListener-${clientSocket.remoteSocketAddress}-Pinger"
+        keepAliveLatch.await()
+
+        while (!(clientSocket.isClosed || isClosing)) {
+            val id = secure.nextLong()
+            keepAliveQueue.addLast(id)
+            enqueueBasePacket(S2CKeepAlive(id))
+
+            Thread.sleep(Duration.ofSeconds(5L))
+        }
+    }
 
     /**
      * Constantly loops over incoming packets and pushes them to the ``incomingPackets`` queue.
@@ -92,14 +122,27 @@ internal class ClientListener(
             // intercept C2SHandshake and change the state, or else we read in the next packet
             // is processed on the queue.
             val previousState = state
-            if (packet is C2SHandshake) {
-                LOGGER.trace("potentially changing state to {}", packet.nextState)
-                clientReference.transitionToState(packet.nextState)
+
+            when (packet) {
+                is C2SHandshake -> {
+                    LOGGER.trace("potentially changing state to {}", packet.nextState)
+                    clientReference.transitionToState(packet.nextState)
+                }
+                is C2SKeepAlive -> {
+                    val keepAlive = keepAliveQueue.removeFirst()
+                    if (keepAlive != packet.value) {
+                        LOGGER.error("Client sent us the wrong keep-alive value!")
+                        throw EOFException()
+                    } else {
+                        LOGGER.trace("received keep-alive: ${packet.value}")
+                    }
+                }
+                else -> {
+                    LOGGER.trace("read packet {}", packet)
+
+                    incomingPackets.put(IncomingPacket(previousState, clientReference, packet))
+                }
             }
-
-            LOGGER.trace("read packet {}", packet)
-
-            incomingPackets.put(IncomingPacket(previousState, clientReference, packet))
         }
     }
 
@@ -141,8 +184,8 @@ internal class ClientListener(
     // == api == //
     internal fun enqueueBasePacket(packet: ProtocolPacket) {
         LOGGER.trace("adding new packet {}", packet)
-        val packet = OutgoingPacket(state, packet)
-        outgoingPackets.put(packet)
+        val outgoing = OutgoingPacket(state, packet)
+        outgoingPackets.put(outgoing)
     }
 
     override fun run() {
@@ -150,6 +193,7 @@ internal class ClientListener(
         StructuredTaskScope.ShutdownOnFailure().use {
             it.fork(::runSocketReader)
             it.fork(::runSocketWriter)
+            it.fork(::runKeepAlive)
 
             it.join()
             it.throwIfFailed()
