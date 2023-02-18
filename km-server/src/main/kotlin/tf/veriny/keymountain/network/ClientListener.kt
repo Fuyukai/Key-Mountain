@@ -121,12 +121,7 @@ internal class ClientListener(
 
             val packetId = into.readVarInt()
 
-            val packetMaker = try {
-                packetRegistry.getIncomingMaker<ProtocolPacket>(state, packetId)
-            } catch (e: Exception) {
-                LOGGER.warn("oops", e)
-                continue
-            }
+            val packetMaker = packetRegistry.getIncomingMaker<ProtocolPacket>(state, packetId)
             val packet = packetMaker.readIn(into)
 
             // intercept C2SHandshake and change the state, or else we read in the next packet
