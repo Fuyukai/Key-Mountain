@@ -1,8 +1,23 @@
+/*
+ * This file is part of Key-Mountain Server.
+ *
+ * Key-Mountain Server is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Key-Mountain Server is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Key-Mountain Server. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package tf.veriny.keymountain.network
 
 import lbmq.LinkedBlockingMultiQueue
 import lbmq.Offerable
-import okio.Buffer
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.KeyMountainServer
 import tf.veriny.keymountain.api.client.ClientReference
@@ -14,8 +29,6 @@ import tf.veriny.keymountain.api.network.packets.*
 import tf.veriny.keymountain.api.network.plugin.BidiBrand
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
 import tf.veriny.keymountain.api.util.Identifiable
-import tf.veriny.keymountain.api.util.Identifier
-import tf.veriny.keymountain.api.util.writeMcString
 import tf.veriny.keymountain.api.world.GameMode
 import tf.veriny.keymountain.api.world.block.WorldPosition
 import tf.veriny.keymountain.client.ClientConnection

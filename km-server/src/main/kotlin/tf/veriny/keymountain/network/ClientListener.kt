@@ -1,18 +1,36 @@
+/*
+ * This file is part of Key-Mountain Server.
+ *
+ * Key-Mountain Server is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Key-Mountain Server is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Key-Mountain Server. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package tf.veriny.keymountain.network
 
 import jdk.incubator.concurrent.StructuredTaskScope
 import lbmq.Offerable
-import okio.*
+import okio.Buffer
+import okio.buffer
+import okio.sink
+import okio.source
 import org.apache.logging.log4j.LogManager
-import tf.veriny.keymountain.api.util.readVarInt
-import tf.veriny.keymountain.api.util.writeVarInt
 import tf.veriny.keymountain.api.PayloadTooLongException
 import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
-import tf.veriny.keymountain.api.network.PacketRegistry
 import tf.veriny.keymountain.api.network.packets.C2SHandshake
 import tf.veriny.keymountain.api.network.packets.S2CDisconnectPlay
+import tf.veriny.keymountain.api.util.readVarInt
+import tf.veriny.keymountain.api.util.writeVarInt
 import java.io.EOFException
 import java.net.Socket
 import java.util.concurrent.LinkedBlockingQueue

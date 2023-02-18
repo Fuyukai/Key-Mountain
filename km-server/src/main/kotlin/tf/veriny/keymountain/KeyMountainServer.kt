@@ -1,3 +1,19 @@
+/*
+ * This file is part of Key-Mountain Server.
+ *
+ * Key-Mountain Server is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, version 3.
+ *
+ * Key-Mountain Server is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Key-Mountain Server. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package tf.veriny.keymountain
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -9,7 +25,6 @@ import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.client.ClientConnection
 import tf.veriny.keymountain.data.Data
-import tf.veriny.keymountain.network.PacketRegistryImpl
 import tf.veriny.keymountain.network.ServerNetworker
 import tf.veriny.keymountain.world.WorldImpl
 import java.net.InetSocketAddress
@@ -25,6 +40,7 @@ public class KeyMountainServer(public val data: Data) {
     public companion object {
         /** The protocol level that we speak. */
         public const val PROTOCOL_LEVEL: Int = 761
+
         /** The game version that we speak. */
         public const val GAME_VERSION: String = "1.19"
 
