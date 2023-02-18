@@ -6,13 +6,13 @@ import javax.management.Query.or
  * An absolute block position in a world.
  */
 @JvmInline
-public value class WorldPosition(public val position: ULong) {
+public value class WorldPosition(public val position: Long) {
     public companion object {
         public operator fun invoke(x: Int, z: Int, y: Int): WorldPosition {
-            var pos = 0UL
-            pos = (x.toULong().and(0x3FFFFFFUL).shl(38))
-            pos = pos.or((z.toULong().and (0x3FFFFFFUL)).shl(12))
-            pos = pos.or(y.toULong().and(0xFFFUL))
+            var pos = 0L
+            pos = (x.toLong().and(0x3FFFFFFL).shl(38))
+            pos = pos.or((z.toLong().and(0x3FFFFFFL)).shl(12))
+            pos = pos.or(y.toLong().and(0xFFFL))
             return WorldPosition(position = pos)
         }
     }
@@ -21,10 +21,17 @@ public value class WorldPosition(public val position: ULong) {
         get() = (position.shr(38)).toInt()
 
     public val z: Int
-        get() = (position.shr(12).and((1UL).shl(26) - 1UL)).toInt()
+        get() = (position.shl(26).shr(38)).toInt()
 
     public val y: Int
-        get() = (position.and((1UL).shl(12) - 1UL)).toInt()
+        get() = (position.and((1L).shl(12) - 1L)).toInt()
+
+    /**
+     * Replaces the position of this entity with another one,
+     */
+    public fun replace(x: Int = this.x, y: Int = this.y, z: Int = this.z): WorldPosition {
+        return Companion(x, y, z)
+    }
 
     override fun toString(): String {
         return "WorldPosition[x=$x, y=$y, z=$z]"

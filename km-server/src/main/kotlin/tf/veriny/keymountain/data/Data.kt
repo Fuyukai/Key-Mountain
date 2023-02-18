@@ -4,10 +4,9 @@ import tf.veriny.keymountain.api.KeyMountainException
 import tf.veriny.keymountain.api.data.KeyMountainData
 import tf.veriny.keymountain.api.data.RegistryWithIds
 import tf.veriny.keymountain.api.data.VanillaSynchronisableRegistry
+import tf.veriny.keymountain.api.entity.EntityType
+import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.mod.ModKlass
-import tf.veriny.keymountain.api.network.PacketRegistry
-import tf.veriny.keymountain.api.network.PluginPacketRegistry
-import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.DimensionInfo
 import tf.veriny.keymountain.api.world.biome.BiomeNetworkInfo
@@ -25,6 +24,7 @@ public class Data : KeyMountainData {
     public val blockStates: BlockStateData = BlockStateData()
 
     override val blocks: RegistryWithIds<BlockType> = MapRegistry(Identifier("minecraft:block"))
+    override val entityTypes: RegistryWithIds<EntityType<*, *>> = MapRegistry(Identifier("minecraft:entity_type"))
     override val dimensions: VanillaSynchronisableRegistry<DimensionInfo> = VanillaSyncMapRegistry(Identifier("minecraft:dimension_type"))
     override val biomeNetworkData: VanillaSynchronisableRegistry<BiomeNetworkInfo> =
         VanillaSyncMapRegistry(Identifier("minecraft:worldgen/biome"))
@@ -55,5 +55,6 @@ public class Data : KeyMountainData {
 
     init {
         blocks.register(AirBlock)
+        entityTypes.register(PlayerEntity)
     }
 }

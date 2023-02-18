@@ -1,5 +1,6 @@
 package tf.veriny.keymountain.api.client
 
+import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
@@ -20,6 +21,9 @@ public interface ClientReference {
 
     /** The login info that this client connected with. */
     public val loginInfo: ClientInfo
+
+    /** The entity that represents this player. */
+    public val entity: PlayerEntity?
 
     /**
      * Changes the login info for this client. Normally only called after launch.

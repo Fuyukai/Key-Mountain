@@ -7,6 +7,7 @@ import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.KeyMountainServer
 import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.data.VanillaSynchronisableRegistry
+import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.NetworkState.*
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.packets.*
@@ -16,6 +17,8 @@ import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.util.writeMcString
 import tf.veriny.keymountain.api.world.GameMode
+import tf.veriny.keymountain.api.world.block.WorldPosition
+import tf.veriny.keymountain.client.ClientConnection
 
 /**
  * Routes incoming packets from clients and updates the server state appropriately.
@@ -127,6 +130,11 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             return
         }
 
+        // spawn the player
+        val world = server.worlds.first()
+        val playerEntity = world.spawnEntity(PlayerEntity, WorldPosition(0, 0, 128), null)
+        (ref as ClientConnection).entity = playerEntity
+
         // send all the various play packets
         val startPlaying = S2CStartPlaying(
             entityId = 0,
@@ -142,10 +150,48 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
 
         val brandPacket = S2CPluginMessage(Identifier("minecraft:brand"), Buffer().also { it.writeMcString("key-mountain") })
         ref.enqueueProtocolPacket(brandPacket)
+
+        val setSpawnPosition = S2CSetSpawnPosition(WorldPosition(0, 0, 128), 0f)
+        ref.enqueueProtocolPacket(setSpawnPosition)
+
+        val setPositionPacket = S2CForcePlayerPosition(
+            playerEntity.position.x, playerEntity.position.z, playerEntity.position.y,
+            0f, 0f, 0, 1234567, true
+        )
+        ref.enqueueProtocolPacket(setPositionPacket)
     }
 
     private fun handleClientInformationPacket(ref: ClientReference, packet: C2SClientInformation) {
         LOGGER.debug("client {}'s settings: {}", ref.loginInfo.username, packet)
+    }
+
+    private fun commonHandleSetPlayerPosition(
+        ref: ClientReference, packet: C2SSetPlayerPosition, onGround: Boolean
+    ) {
+        val entity = ref.entity
+        if (entity == null) {
+            LOGGER.error("client sent a set player position before they exist??")
+            ref.enqueueProtocolPacket(S2CDisconnectPlay("\"No\""))
+            return
+        } else {
+            LOGGER.trace("player sent position: ({}, {}, {})", packet.x, packet.z, packet.feetY)
+        }
+
+        entity.position.x = packet.x
+        entity.position.z = packet.z
+        entity.position.y = packet.feetY
+    }
+
+    private fun handleSetPlayerPositionPacket(ref: ClientReference, packet: C2SSetPlayerPosition) {
+        commonHandleSetPlayerPosition(ref, packet, packet.onGround)
+    }
+
+    private fun handleSetPlayerCombinedPacket(ref: ClientReference, packet: C2SSetPlayerCombined) {
+        commonHandleSetPlayerPosition(ref, packet.position, packet.onGround)
+    }
+
+    private fun handleConfirmTeleportationPacket(ref: ClientReference, packet: C2SConfirmTeleportation) {
+        // pass
     }
 
     init {
@@ -163,11 +209,16 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addIncomingPacket(PLAY, C2SPluginMessage.PACKET_ID, C2SPluginMessage, ::handlePluginMessagePacket)
         packets.addIncomingPacket(PLAY, C2SPong.PACKET_ID, C2SPong, ::handlePongPacket)
         packets.addIncomingPacket(PLAY, C2SClientInformation.PACKET_ID, C2SClientInformation, ::handleClientInformationPacket)
+        packets.addIncomingPacket(PLAY, C2SSetPlayerPosition.PACKET_ID, C2SSetPlayerPosition, ::handleSetPlayerPositionPacket)
+        packets.addIncomingPacket(PLAY, C2SSetPlayerCombined.PACKET_ID, C2SSetPlayerCombined, ::handleSetPlayerCombinedPacket)
+        packets.addIncomingPacket(PLAY, C2SConfirmTeleportation.PACKET_ID, C2SConfirmTeleportation, ::handleConfirmTeleportationPacket)
 
         packets.addOutgoingPacket(PLAY, S2CPing.PACKET_ID, S2CPing)
         packets.addOutgoingPacket(PLAY, S2CPluginMessage.PACKET_ID, S2CPluginMessage)
         packets.addOutgoingPacket(PLAY, S2CDisconnectPlay.PACKET_ID, S2CDisconnectPlay)
         packets.addOutgoingPacket(PLAY, S2CStartPlaying.PACKET_ID, S2CStartPlaying)
+        packets.addOutgoingPacket(PLAY, S2CSetSpawnPosition.PACKET_ID, S2CSetSpawnPosition)
+        packets.addOutgoingPacket(PLAY, S2CForcePlayerPosition.PACKET_ID, S2CForcePlayerPosition)
 
         packets.addIncomingPacket(BidiBrand.ID, BidiBrand, ::handleBrandPacket)
         packets.addOutgoingPacket(BidiBrand.ID, BidiBrand)

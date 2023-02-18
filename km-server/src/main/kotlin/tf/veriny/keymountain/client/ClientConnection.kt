@@ -6,6 +6,7 @@ import tf.veriny.keymountain.KeyMountainServer
 import tf.veriny.keymountain.api.IllegalPacketException
 import tf.veriny.keymountain.api.client.ClientInfo
 import tf.veriny.keymountain.api.client.ClientReference
+import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.packets.S2CPluginMessage
@@ -40,6 +41,9 @@ public class ClientConnection(
 
     override var loginInfo: ClientInfo = ClientInfo()
         private set
+
+    override var entity: PlayerEntity? = null
+        internal set
 
     override fun changeLoginInfo(uuid: UUID, username: String): ClientInfo {
         loginInfo = ClientInfo(uuid, username)

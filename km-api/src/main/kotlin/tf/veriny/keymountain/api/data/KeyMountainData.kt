@@ -1,5 +1,6 @@
 package tf.veriny.keymountain.api.data
 
+import tf.veriny.keymountain.api.entity.EntityType
 import tf.veriny.keymountain.api.mod.ModKlass
 import tf.veriny.keymountain.api.network.PluginPacketRegistry
 import tf.veriny.keymountain.api.world.DimensionInfo
@@ -13,6 +14,7 @@ import kotlin.reflect.KClass
  */
 public interface KeyMountainData {
     public val blocks: RegistryWithIds<BlockType>
+    public val entityTypes: RegistryWithIds<EntityType<*, *>>
     public val dimensions: VanillaSynchronisableRegistry<DimensionInfo>
     public val biomeNetworkData: VanillaSynchronisableRegistry<BiomeNetworkInfo>
 

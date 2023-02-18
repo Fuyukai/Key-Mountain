@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import jdk.net.ExtendedSocketOptions
 import org.apache.logging.log4j.LogManager
+import tf.veriny.keymountain.api.util.Identifier
+import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.client.ClientConnection
 import tf.veriny.keymountain.data.Data
 import tf.veriny.keymountain.network.PacketRegistryImpl
 import tf.veriny.keymountain.network.ServerNetworker
+import tf.veriny.keymountain.world.WorldImpl
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.concurrent.ExecutorService
@@ -32,6 +35,8 @@ public class KeyMountainServer(public val data: Data) {
 
     public val jsonMapper: ObjectMapper = ObjectMapper().registerKotlinModule()
 
+    public val worlds: List<World> = mutableListOf()
+
     private fun acceptAndDispatch(sock: ServerSocket, executor: ExecutorService) {
         val next = sock.accept()
         LOGGER.trace(
@@ -44,6 +49,9 @@ public class KeyMountainServer(public val data: Data) {
 
     public fun run(): Unit = Executors.newVirtualThreadPerTaskExecutor().use { mainExecutor ->
         Thread.currentThread().name = "KeyMountain-Server-Acceptor"
+        val worlds = this.worlds as MutableList<World>
+        worlds.add(WorldImpl.generatedWorld(this, data.dimensions.get(Identifier("minecraft:overworld"))!!))
+
         LOGGER.info("Starting KeyMountain server!")
 
         // start the various simulators

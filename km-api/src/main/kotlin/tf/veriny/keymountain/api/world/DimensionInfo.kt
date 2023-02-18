@@ -103,6 +103,8 @@ public data class DimensionInfo(
         }
     }
 
+    public val totalHeight: Int = maxHeight - minHeight
+
     // automatically generated based on the other properties
     @get:JsonProperty("piglin_safe")
     public val piglinSafe: Boolean get() = true

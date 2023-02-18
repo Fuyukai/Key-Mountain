@@ -12,7 +12,7 @@ import tf.veriny.keymountain.api.world.block.BlockType
 public class Chunk {
     private val blocks = Array(16) {
         Array(16) {
-            ULongArray(16)
+            LongArray(16)
         }
     }
 
@@ -24,5 +24,10 @@ public class Chunk {
     public fun getBlockMeta(x: Int, y: Int, z: Int): UInt {
         val rawId = blocks[x][z][y]
         return rawId.toUInt()
+    }
+
+    public fun setBlock(x: Int, y: Int, z: Int, block: Int, metadata: Int) {
+        val rawData = (block.toLong().shl(32)).or(metadata.toLong())
+        blocks[x][z][y] = rawData
     }
 }
