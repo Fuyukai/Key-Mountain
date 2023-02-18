@@ -32,6 +32,7 @@ import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.world.GameMode
 import tf.veriny.keymountain.api.world.block.WorldPosition
 import tf.veriny.keymountain.client.ClientConnection
+import tf.veriny.keymountain.world.WorldImpl
 
 /**
  * Routes incoming packets from clients and updates the server state appropriately.
@@ -143,7 +144,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         }
 
         // spawn the player
-        val world = server.worlds.first()
+        val world = server.worlds.first() as WorldImpl
         val playerEntity = world.spawnEntity(PlayerEntity, WorldPosition(0, 0, 128), null)
         ref.entity = playerEntity
 
@@ -151,7 +152,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         val startPlaying = S2CStartPlaying(
             entityId = playerEntity.uniqueId,
             isHardcore = false,
-            gameMode = GameMode.SURVIVAL,
+            gameMode = GameMode.CREATIVE,
             dimensionIds = server.data.dimensions.getAllEntries().map { it.identifier },
             synchronisedRegisteries = listOf(server.data.dimensions, server.data.biomeNetworkData) as List<VanillaSynchronisableRegistry<Identifiable>>,
             dimensionType = "minecraft:overworld",
@@ -162,14 +163,24 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
 
         ref.enqueuePluginPacket(BidiBrand("key-mountain"))
 
+        // ack!
+        for (chunkX in -7..7) {
+            for (chunkZ in -7..7) {
+                val data = world.writeChunkData(chunkX, chunkZ)
+                val chunkPacket = S2CChunkData(chunkX, chunkZ, data, world.dimensionInfo.totalHeight / 16)
+                ref.enqueueProtocolPacket(chunkPacket)
+            }
+        }
+
         val setSpawnPosition = S2CSetSpawnPosition(WorldPosition(0, 0, 128), 0f)
         ref.enqueueProtocolPacket(setSpawnPosition)
 
         val setPositionPacket = S2CForcePlayerPosition(
-            playerEntity.position.x, playerEntity.position.z, playerEntity.position.y,
+            0.0, 0.0, 420.0,
             0f, 0f, 0, 1234567, true
         )
         ref.enqueueProtocolPacket(setPositionPacket)
+
     }
 
     private fun handleClientInformationPacket(ref: ClientReference, packet: C2SClientInformation) {
@@ -177,7 +188,10 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
     }
 
     private fun commonHandleSetPlayerPosition(
-        ref: ClientReference, packet: C2SSetPlayerPosition, onGround: Boolean
+        ref: ClientReference,
+        packet: C2SSetPlayerPosition,
+        rotation: C2SSetPlayerRotation?,
+        onGround: Boolean
     ) {
         val entity = ref.entity
         if (entity == null) {
@@ -187,17 +201,29 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             LOGGER.trace("player sent position: ({}, {}, {})", packet.x, packet.z, packet.feetY)
         }
 
+        // awkwardly hover the player at Y=132 for now
+
         entity.position.x = packet.x
         entity.position.z = packet.z
         entity.position.y = packet.feetY
+
+        /*val position = S2CForcePlayerPosition(
+            0.0, 0.0, 132.0,
+            rotation?.yaw ?: 0f, rotation?.pitch ?: 0f, 0, 1234567, true
+        )
+        ref.enqueueProtocolPacket(position)*/
     }
 
     private fun handleSetPlayerPositionPacket(ref: ClientReference, packet: C2SSetPlayerPosition) {
-        commonHandleSetPlayerPosition(ref, packet, packet.onGround)
+        commonHandleSetPlayerPosition(ref, packet, null, packet.onGround)
     }
 
     private fun handleSetPlayerCombinedPacket(ref: ClientReference, packet: C2SSetPlayerCombined) {
-        commonHandleSetPlayerPosition(ref, packet.position, packet.onGround)
+        commonHandleSetPlayerPosition(ref, packet.position, packet.rotation, packet.onGround)
+    }
+
+    private fun handleSetPlayerRotationPacket(ref: ClientReference, packet: C2SSetPlayerRotation) {
+        // pass
     }
 
     private fun handleConfirmTeleportationPacket(ref: ClientReference, packet: C2SConfirmTeleportation) {
@@ -222,6 +248,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addIncomingPacket(PLAY, C2SSetPlayerPosition.PACKET_ID, C2SSetPlayerPosition, ::handleSetPlayerPositionPacket)
         packets.addIncomingPacket(PLAY, C2SSetPlayerCombined.PACKET_ID, C2SSetPlayerCombined, ::handleSetPlayerCombinedPacket)
         packets.addIncomingPacket(PLAY, C2SConfirmTeleportation.PACKET_ID, C2SConfirmTeleportation, ::handleConfirmTeleportationPacket)
+        packets.addIncomingPacket(PLAY, C2SSetPlayerRotation.PACKET_ID, C2SSetPlayerRotation, ::handleSetPlayerRotationPacket)
 
         packets.addOutgoingPacket(PLAY, S2CPing.PACKET_ID, S2CPing)
         packets.addOutgoingPacket(PLAY, S2CPluginMessage.PACKET_ID, S2CPluginMessage)
@@ -229,6 +256,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addOutgoingPacket(PLAY, S2CStartPlaying.PACKET_ID, S2CStartPlaying)
         packets.addOutgoingPacket(PLAY, S2CSetSpawnPosition.PACKET_ID, S2CSetSpawnPosition)
         packets.addOutgoingPacket(PLAY, S2CForcePlayerPosition.PACKET_ID, S2CForcePlayerPosition)
+        packets.addOutgoingPacket(PLAY, S2CChunkData.PACKET_ID, S2CChunkData)
 
         packets.addIncomingPacket(BidiBrand.ID, BidiBrand, ::handleBrandPacket)
         packets.addOutgoingPacket(BidiBrand.ID, BidiBrand)

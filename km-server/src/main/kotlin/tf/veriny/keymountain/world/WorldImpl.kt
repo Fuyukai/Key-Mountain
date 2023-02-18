@@ -19,6 +19,8 @@ package tf.veriny.keymountain.world
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import lbmq.LinkedBlockingMultiQueue
+import okio.Buffer
+import okio.ByteString
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.KeyMountainServer
 import tf.veriny.keymountain.api.entity.Entity
@@ -32,6 +34,7 @@ import tf.veriny.keymountain.api.world.block.WorldPosition
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
+import kotlin.math.abs
 
 // This is the "core" simulation unit for Key Mountain.
 
@@ -51,7 +54,7 @@ public class WorldImpl(
             for (chunkX in -7..7) {
                 for (chunkZ in -7..7) {
                     LOGGER.trace("setting chunk ({}, {})", chunkX, chunkZ)
-                    val section = ChunkSection(dimensionInfo.totalHeight / 16)
+                    val section = ChunkColumn(chunkX, chunkZ,dimensionInfo.totalHeight / 16)
                     val id = toChunkId(chunkX.toLong(), chunkZ.toLong())
                     world.chunks[id] = section
                 }
@@ -59,15 +62,19 @@ public class WorldImpl(
 
             val stone = server.data.blocks.get(Identifier("minecraft:stone"))!!
             // create little 3x3 platform at (0, 0, 128)
-            world.setBlock(WorldPosition(-1, -1, 128), stone, 0)
-            world.setBlock(WorldPosition(0, -1, 128), stone, 0)
-            world.setBlock(WorldPosition(1, -1, 128), stone, 0)
-            world.setBlock(WorldPosition(-1, 0, 128), stone, 0)
             world.setBlock(WorldPosition(0, 0, 128), stone, 0)
-            world.setBlock(WorldPosition(1, 0, 128), stone, 0)
-            world.setBlock(WorldPosition(-1, 1, 128), stone, 0)
             world.setBlock(WorldPosition(0, 1, 128), stone, 0)
+            world.setBlock(WorldPosition(0, 2, 128), stone, 0)
+            world.setBlock(WorldPosition(1, 0, 128), stone, 0)
             world.setBlock(WorldPosition(1, 1, 128), stone, 0)
+            world.setBlock(WorldPosition(1, 2, 128), stone, 0)
+            world.setBlock(WorldPosition(2, 0, 128), stone, 0)
+            world.setBlock(WorldPosition(2, 1, 128), stone, 0)
+            world.setBlock(WorldPosition(2, 2, 128), stone, 0)
+
+            world.setBlock(WorldPosition(-1, 0, 128), stone, 0)
+            world.setBlock(WorldPosition(-1, 1, 128), stone, 0)
+
 
             return world
         }
@@ -79,7 +86,7 @@ public class WorldImpl(
 
     // map of (Cx << 32) | Cz => chunk section
     // probably not the best structure, but
-    private val chunks = Long2ObjectOpenHashMap<ChunkSection>()
+    private val chunks = Long2ObjectOpenHashMap<ChunkColumn>()
 
     private val events = LinkedBlockingMultiQueue<Unit, Unit>()
 
@@ -91,13 +98,22 @@ public class WorldImpl(
     private val knownEntites = Int2ObjectOpenHashMap<Entity<*, *>>()
 
     private fun getChunk(at: WorldPosition): Chunk? {
-        val chunkX = at.x / 16L
-        val chunkZ = at.z / 16L
+        val chunkX = at.x.floorDiv(16L)
+        val chunkZ = at.z.floorDiv(16L)
         val pos = toChunkId(chunkX, chunkZ)
 
         val chunkSection = chunks.get(pos) ?: return null
         val y = (at.y - dimensionInfo.minHeight) / 16
         return chunkSection.chunks[y]
+    }
+
+    internal fun writeChunkData(chunkX: Int, chunkZ: Int): ByteString = worldLock.read {
+        val buf = Buffer()
+        val sectionId = toChunkId(chunkX.toLong(), chunkZ.toLong())
+        val chunkSection = chunks.get(sectionId) ?: error("no such chunk: $chunkX,$chunkZ")
+
+        chunkSection.serialiseBlockStates(server.data.blockStates, buf)
+        buf.readByteString()
     }
 
     /**
@@ -122,6 +138,8 @@ public class WorldImpl(
      * [metadata].
      */
     override fun setBlock(at: WorldPosition, blockType: BlockType, metadata: Int): Unit = worldLock.write {
+        val chunkX = at.x.floorDiv(16L)
+        val chunkZ = at.z.floorDiv(16L)
         val chunk = getChunk(at) ?: error("no such chunk: $at")
         val blockId = server.data.blocks.getNumericId(blockType)
         chunk.setBlock(

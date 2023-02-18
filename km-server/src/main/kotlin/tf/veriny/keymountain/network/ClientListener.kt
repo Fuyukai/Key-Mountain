@@ -80,6 +80,11 @@ internal class ClientListener(
         keepAliveLatch.await()
 
         while (!(clientSocket.isClosed || isClosing)) {
+            if (keepAliveQueue.size > 8) {
+                LOGGER.error("Client has failed to respond to over eight keep-alive packets, cutting it off")
+                throw EOFException()
+            }
+
             val id = secure.nextLong()
             keepAliveQueue.addLast(id)
             enqueueBasePacket(S2CKeepAlive(id))
@@ -116,7 +121,12 @@ internal class ClientListener(
 
             val packetId = into.readVarInt()
 
-            val packetMaker = packetRegistry.getIncomingMaker<ProtocolPacket>(state, packetId)
+            val packetMaker = try {
+                packetRegistry.getIncomingMaker<ProtocolPacket>(state, packetId)
+            } catch (e: Exception) {
+                LOGGER.warn("oops", e)
+                continue
+            }
             val packet = packetMaker.readIn(into)
 
             // intercept C2SHandshake and change the state, or else we read in the next packet

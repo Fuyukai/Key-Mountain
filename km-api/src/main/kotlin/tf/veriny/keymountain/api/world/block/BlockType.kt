@@ -85,4 +85,8 @@ public open class EmptyBlockType(
     override val identifier: Identifier
 ) : BlockType, WithBlockMetadata by WithBlockMetadata.NoMetadata {
     public constructor(id: String) : this(Identifier(id))
+
+    override fun toString(): String {
+        return "EmptyBlockType[id=$identifier]"
+    }
 }

@@ -20,7 +20,7 @@ public class C2SSetPlayerRotation(
     public val onGround: Boolean,
 ) : ProtocolPacket {
     public companion object : ProtocolPacketSerialiser<C2SSetPlayerRotation> {
-        public const val PACKET_ID: Int = 0x13
+        public const val PACKET_ID: Int = 0x15
 
         override fun readIn(data: Buffer): C2SSetPlayerRotation {
             val yaw = Float.fromBits(data.readInt())

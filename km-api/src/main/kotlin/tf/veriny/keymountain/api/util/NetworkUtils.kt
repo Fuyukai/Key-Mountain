@@ -126,3 +126,9 @@ public fun BufferedSink.writeUuid(u: UUID) {
     writeLong(u.mostSignificantBits)
     writeLong(u.leastSignificantBits)
 }
+
+public fun BufferedSink.writeBitSet(bs: BitSet) {
+    val items = bs.toLongArray()
+    writeVarInt(items.size)
+    items.forEach(::writeLong)
+}

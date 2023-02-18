@@ -30,6 +30,10 @@ public class Chunk {
         }
     }
 
+    public fun get(x: Int, y: Int, z: Int): Long {
+        return blocks[x][z][y]
+    }
+
     public fun getBlockTypeId(x: Int, y: Int, z: Int): Int {
         val rawId = blocks[x][z][y]
         return (rawId.shr(32)).toInt()
