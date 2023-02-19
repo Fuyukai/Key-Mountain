@@ -64,6 +64,6 @@ public class KeyMountainMakeUp {
         LOGGER.debug("Generated all known blockstate IDs in ${bsTime.inWholeMilliseconds}ms.")
 
         val server = KeyMountainServer(data)
-        server.run()
+        server.runServer()
     }
 }

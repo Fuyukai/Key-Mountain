@@ -63,19 +63,11 @@ public class WorldImpl(
             }
 
             val stone = server.data.blocks.get(Identifier("minecraft:stone"))!!
-            // create little 3x3 platform at (0, 0, 128)
-            world.setBlock(WorldPosition(0, 0, 128), stone)
-            world.setBlock(WorldPosition(0, 1, 128), stone)
-            world.setBlock(WorldPosition(0, 2, 128), stone)
-            world.setBlock(WorldPosition(1, 0, 128), stone)
-            world.setBlock(WorldPosition(1, 1, 128), stone)
-            world.setBlock(WorldPosition(1, 2, 128), stone)
-            world.setBlock(WorldPosition(2, 0, 128), stone)
-            world.setBlock(WorldPosition(2, 1, 128), stone)
-            world.setBlock(WorldPosition(2, 2, 128), stone)
-
-            world.setBlock(WorldPosition(-1, 0, 128), stone)
-            world.setBlock(WorldPosition(-1, 1, 128), stone)
+            for (x in 0 until 9) {
+                for (z in 0 until 9) {
+                    world.setBlock(WorldPosition(x, z, 128), stone)
+                }
+            }
 
 
             return world
@@ -169,7 +161,7 @@ public class WorldImpl(
     }
 
     override fun run() {
-        Thread.currentThread().name = "KeyMountain-WorldSim-Overworld"
+        Thread.currentThread().name = "KeyMountain-WorldSim-${dimensionInfo.identifier.full}"
 
         while (true) {
             TODO()

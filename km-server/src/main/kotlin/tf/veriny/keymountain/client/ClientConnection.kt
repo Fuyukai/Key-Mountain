@@ -147,13 +147,11 @@ public class ClientConnection(
                 LOGGER.debug("Client disconnected")
             }
         } finally {
-            val entity = this.entity
-            if (entity != null) {
-                server.removePlayer(entity)
-            }
-
-            network.isClosing = true
             server.networker.removeSubQueue(this)
+            val entity = this.entity
+
+            server.removePlayer(this)
+            network.isClosing = true
         }
     }
 }

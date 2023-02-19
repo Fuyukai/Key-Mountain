@@ -18,8 +18,9 @@ package tf.veriny.keymountain
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import jdk.net.ExtendedSocketOptions
+import jdk.incubator.concurrent.StructuredTaskScope
 import org.apache.logging.log4j.LogManager
+import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.World
@@ -29,6 +30,7 @@ import tf.veriny.keymountain.network.ServerNetworker
 import tf.veriny.keymountain.world.WorldImpl
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -50,56 +52,50 @@ public class KeyMountainServer(public val data: Data) {
     public val networker: ServerNetworker = ServerNetworker(this)
     public val jsonMapper: ObjectMapper = ObjectMapper().registerKotlinModule()
 
+    /** The map of players currently connected to the server. */
+    public val players: MutableMap<UUID, ClientReference> = mutableMapOf()
+
     // todo: better
     public val worlds: List<World> = mutableListOf()
-
-    private fun acceptAndDispatch(sock: ServerSocket, executor: ExecutorService) {
-        val next = sock.accept()
-        LOGGER.trace(
-            "Accepted connection from {} on port {}!",
-            next.inetAddress, next.port
-        )
-        val client = ClientConnection(this, next)
-        executor.execute(client)
-    }
 
     /**
      * Removes a player from the current server.
      */
-    public fun removePlayer(player: PlayerEntity) {
+    public fun removePlayer(player: ClientReference) {
         // TODO: broadcast to other players...
-        for (world in worlds) {
-            world.removeEntity<PlayerEntity>(player.uniqueId)
+        val entity = player.entity
+        if (entity != null) {
+            worlds.forEach { it.removeEntity<PlayerEntity>(entity.uniqueId) }
+        }
+
+        players.remove(player.loginInfo.uuid)
+    }
+
+    // server tasks
+    private fun acceptNewConnections(sock: ServerSocket) = Executors.newVirtualThreadPerTaskExecutor().use {
+        Thread.currentThread().name = "KeyMountain-Server-Acceptance"
+        LOGGER.info("Starting accept loop!")
+
+        while (true) {
+            val next = sock.accept()
+            LOGGER.debug("Accepted new connection from {}!", next.remoteSocketAddress)
+            it.submit(ClientConnection(this, next))
         }
     }
 
-    public fun run(): Unit = Executors.newVirtualThreadPerTaskExecutor().use { mainExecutor ->
+    public fun runServer(): Unit = StructuredTaskScope.ShutdownOnFailure().use {
         val worlds = this.worlds as MutableList<World>
         worlds.add(WorldImpl.generatedWorld(this, data.dimensions.get(Identifier("minecraft:overworld"))!!))
-
-        Thread.currentThread().name = "KeyMountain-Server-Acceptor"
-
-        LOGGER.info("Starting KeyMountain server!")
-
-        // start the various simulators
-        mainExecutor.submit(networker)
 
         val sock = ServerSocket()
         LOGGER.info("Binding to port 25565")
         sock.bind(InetSocketAddress(25565))
         sock.reuseAddress = true
-        sock.setOption(ExtendedSocketOptions.TCP_QUICKACK, true)
 
-        Executors.newThreadPerTaskExecutor(
-            Thread.ofVirtual().name("KeyMountain-Client-", 0L).factory()
-        ).use { clientExecutor ->
-            while (true) {
-                try {
-                    acceptAndDispatch(sock, clientExecutor)
-                } catch (e: Exception) {
-                    LOGGER.error("Error while accepting client connection!", e)
-                }
-            }
-        }
+        it.fork { acceptNewConnections(sock) }
+        it.fork { networker.run() }
+
+        it.join()
+        it.throwIfFailed()
     }
 }
