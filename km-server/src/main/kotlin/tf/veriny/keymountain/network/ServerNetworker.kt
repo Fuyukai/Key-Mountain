@@ -157,12 +157,15 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             )
             ref.enqueueProtocolPacket(infoUpdateForConnector)
 
-            val infoUpdateForOthers = S2CPlayerInfoUpdate(
-                ref.loginInfo.uuid,
-                S2CPlayerInfoUpdate.AddPlayer(ref.loginInfo.username, mapOf()),
-                S2CPlayerInfoUpdate.UpdateListed(true)
-            )
-            player.enqueueProtocolPacket(infoUpdateForOthers)
+            // make sure we don't accidentally send the client an extra packet
+            if (player != ref) {
+                val infoUpdateForOthers = S2CPlayerInfoUpdate(
+                    ref.loginInfo.uuid,
+                    S2CPlayerInfoUpdate.AddPlayer(ref.loginInfo.username, mapOf()),
+                    S2CPlayerInfoUpdate.UpdateListed(true)
+                )
+                player.enqueueProtocolPacket(infoUpdateForOthers)
+            }
         }
 
         // spawn the player
