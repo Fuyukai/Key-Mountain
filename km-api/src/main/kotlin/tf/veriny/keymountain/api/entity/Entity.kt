@@ -7,6 +7,7 @@
 package tf.veriny.keymountain.api.entity
 
 import tf.veriny.keymountain.api.util.Vector3
+import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.api.world.block.WorldPosition
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -24,6 +25,9 @@ public interface Entity<Data : EntityData, Self : Entity<Data, Self>> {
             return entityCounter.getAndIncrement()
         }
     }
+
+    /** The world this entity is currently inside. */
+    public val world: World
 
     /** The type of this entity. */
     public val type: EntityType<Data, Self>

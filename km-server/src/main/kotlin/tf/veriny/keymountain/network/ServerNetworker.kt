@@ -166,9 +166,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         // ack!
         for (chunkX in -7..7) {
             for (chunkZ in -7..7) {
-                val data = world.writeChunkData(chunkX, chunkZ)
-                val chunkPacket = S2CChunkData(chunkX, chunkZ, data, world.dimensionInfo.totalHeight / 16)
-                ref.enqueueProtocolPacket(chunkPacket)
+                ref.enqueueChunkData(chunkX.toLong(), chunkZ.toLong())
             }
         }
 
@@ -230,6 +228,10 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         // pass
     }
 
+    private fun handleSwingArmPacket(ref: ClientReference, packet: C2SSwingArm) {
+        // pass
+    }
+
     init {
         val packets = server.data.packets
         packets.addIncomingPacket(HANDSHAKE, C2SHandshake.PACKET_ID, C2SHandshake, ::handleHandshakePacket)
@@ -249,6 +251,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addIncomingPacket(PLAY, C2SSetPlayerCombined.PACKET_ID, C2SSetPlayerCombined, ::handleSetPlayerCombinedPacket)
         packets.addIncomingPacket(PLAY, C2SConfirmTeleportation.PACKET_ID, C2SConfirmTeleportation, ::handleConfirmTeleportationPacket)
         packets.addIncomingPacket(PLAY, C2SSetPlayerRotation.PACKET_ID, C2SSetPlayerRotation, ::handleSetPlayerRotationPacket)
+        packets.addIncomingPacket(PLAY, C2SSwingArm.PACKET_ID, C2SSwingArm, ::handleSwingArmPacket)
 
         packets.addOutgoingPacket(PLAY, S2CPing.PACKET_ID, S2CPing)
         packets.addOutgoingPacket(PLAY, S2CPluginMessage.PACKET_ID, S2CPluginMessage)

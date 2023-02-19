@@ -19,6 +19,10 @@ package tf.veriny.keymountain.world
 import okio.Buffer
 import tf.veriny.keymountain.api.util.writeVarInt
 import tf.veriny.keymountain.data.BlockStateData
+import java.util.concurrent.locks.ReadWriteLock
+import java.util.concurrent.locks.ReentrantReadWriteLock
+import kotlin.concurrent.read
+import kotlin.concurrent.write
 import kotlin.math.floor
 
 /**
@@ -27,63 +31,46 @@ import kotlin.math.floor
 public class ChunkColumn(
     public val x: Int, public val z: Int,
     private val height: Int,
-) {
     public val chunks: Array<Chunk> = Array(height) { Chunk() }
+) {
+
+    // this is per-column to allow the client to see a consistent update state during serialisation
+    // as if a lower chunk is written, but a different client then updates it during writing another
+    // chunk, the client won't see it as block updates will only be sent after a chunk has been
+    // fully serialised.
+    /** The read/write lock that guards access to this column's data. */
+    public val lock: ReentrantReadWriteLock = ReentrantReadWriteLock()
 
     /**
-     * Serialises the chunk data in this section to the specified [buffer].
+     * Gets the full block ID + block metadata bits at (x, y, z). This is preferred if you need
+     * both as it is atomic.
      */
-    public fun serialiseBlockStates(
-        blockStates: BlockStateData,
-        buffer: Buffer,
-        v: Boolean = false
-    ) {
-        val bitsNeededPer = blockStates.bitsPerEntry
+    public fun getCompleteBlockData(x: Int, y: Int, z: Int): Long = lock.read {
+        val chunk = chunks[y / 16]
+        return chunk.get(x, y, z)
+    }
 
-        for (chunk in chunks) {
-            var bitsUsed = 0
-            var current = 0L
+    /**
+     * Gets the ID of the block at (x, y, z).
+     */
+    public fun getBlockId(x: Int, y: Int, z: Int): Int = lock.read {
+        val chunk = chunks[y / 16]
+        return chunk.getBlockTypeId(x, y, z)
+    }
 
-            // block count, lie blatantly
-            buffer.writeShort(4096)
+    /**
+     * Gets the metadata of the block at (x, y, z).
+     */
+    public fun getBlockMetadata(x: Int, y: Int, z: Int): UInt = lock.read {
+        val chunk = chunks[y / 16]
+        return chunk.getBlockMeta(x, y.mod(16), z)
+    }
 
-            // block states (paletted container)
-            // say we use 16 bits per entry. the client seems to ignore the actual value,
-            // just check if its above 9?
-            buffer.writeByte(bitsNeededPer)
-
-            // no palette data!
-
-            // number of longs: 4096 / floor(64 / bits)
-            buffer.writeVarInt(4096 / (64).floorDiv(bitsNeededPer))
-
-            for (y in 0 until 16) {
-                for (z in 0 until 16) {
-                    for (x in 0 until 16) {
-                        val fullId = chunk.get(x, y, z)
-                        val bsId = blockStates.getBlockStateId(fullId)
-
-                        // or on and shift along
-                        val nextId = bsId.toLong().shl(bitsUsed)
-                        current = current.or(nextId)
-                        bitsUsed += bitsNeededPer
-
-                        if (bitsUsed + bitsNeededPer >= 64) {
-                            buffer.writeLong(current)
-                            current = 0L
-                            bitsUsed = 0
-                        }
-                    }
-                }
-            }
-
-            // biomes (paletted container), single valued as we dont currently implement biomes
-            // bits per entry: 0
-            buffer.writeByte(0)
-            // "palette", 0 for the first biome entry in the registry
-            buffer.writeVarInt(0)
-            // array size (0 for direct palettes)
-            buffer.writeVarInt(0)
-        }
+    /**
+     * Sets the block at (x, y, z) to the ID [blockId] with the specified [metadata].
+     */
+    public fun setBlock(x: Int, y: Int, z: Int, blockId: Int, metadata: UInt): Unit = lock.write {
+        val chunk = chunks[y / 16]
+        chunk.setBlock(x, y.mod(16), z, blockId, metadata)
     }
 }

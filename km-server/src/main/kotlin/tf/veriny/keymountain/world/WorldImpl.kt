@@ -23,18 +23,20 @@ import okio.Buffer
 import okio.ByteString
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.KeyMountainServer
+import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.Entity
 import tf.veriny.keymountain.api.entity.EntityData
 import tf.veriny.keymountain.api.entity.EntityType
 import tf.veriny.keymountain.api.util.Identifier
+import tf.veriny.keymountain.api.world.ChunkColumnSerialiser
 import tf.veriny.keymountain.api.world.DimensionInfo
 import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.api.world.block.BlockType
 import tf.veriny.keymountain.api.world.block.WorldPosition
+import tf.veriny.keymountain.network.ChunkColumnSerialiserImpl
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
-import kotlin.math.abs
 
 // This is the "core" simulation unit for Key Mountain.
 
@@ -62,18 +64,18 @@ public class WorldImpl(
 
             val stone = server.data.blocks.get(Identifier("minecraft:stone"))!!
             // create little 3x3 platform at (0, 0, 128)
-            world.setBlock(WorldPosition(0, 0, 128), stone, 0)
-            world.setBlock(WorldPosition(0, 1, 128), stone, 0)
-            world.setBlock(WorldPosition(0, 2, 128), stone, 0)
-            world.setBlock(WorldPosition(1, 0, 128), stone, 0)
-            world.setBlock(WorldPosition(1, 1, 128), stone, 0)
-            world.setBlock(WorldPosition(1, 2, 128), stone, 0)
-            world.setBlock(WorldPosition(2, 0, 128), stone, 0)
-            world.setBlock(WorldPosition(2, 1, 128), stone, 0)
-            world.setBlock(WorldPosition(2, 2, 128), stone, 0)
+            world.setBlock(WorldPosition(0, 0, 128), stone)
+            world.setBlock(WorldPosition(0, 1, 128), stone)
+            world.setBlock(WorldPosition(0, 2, 128), stone)
+            world.setBlock(WorldPosition(1, 0, 128), stone)
+            world.setBlock(WorldPosition(1, 1, 128), stone)
+            world.setBlock(WorldPosition(1, 2, 128), stone)
+            world.setBlock(WorldPosition(2, 0, 128), stone)
+            world.setBlock(WorldPosition(2, 1, 128), stone)
+            world.setBlock(WorldPosition(2, 2, 128), stone)
 
-            world.setBlock(WorldPosition(-1, 0, 128), stone, 0)
-            world.setBlock(WorldPosition(-1, 1, 128), stone, 0)
+            world.setBlock(WorldPosition(-1, 0, 128), stone)
+            world.setBlock(WorldPosition(-1, 1, 128), stone)
 
 
             return world
@@ -84,68 +86,60 @@ public class WorldImpl(
         }
     }
 
+    override val columnSerialiser: ChunkColumnSerialiser = ChunkColumnSerialiserImpl(this, server.data)
+
     // map of (Cx << 32) | Cz => chunk section
     // probably not the best structure, but
     private val chunks = Long2ObjectOpenHashMap<ChunkColumn>()
 
     private val events = LinkedBlockingMultiQueue<Unit, Unit>()
 
-    // Read lock is acquired by any call to get block data or by the chunk data reader.
-    // Write lock is acquired by any call to set block data.
+    // Used to lock access to world-specific data.
     private val worldLock = ReentrantReadWriteLock()
 
     // mapping of entity id: entity
     private val knownEntites = Int2ObjectOpenHashMap<Entity<*, *>>()
 
-    private fun getChunk(at: WorldPosition): Chunk? {
-        val chunkX = at.x.floorDiv(16L)
-        val chunkZ = at.z.floorDiv(16L)
+    /**
+     * Gets the chunk column at ([chunkX], [chunkZ]).
+     */
+    public fun getChunkColumn(chunkX: Long, chunkZ: Long): ChunkColumn? {
         val pos = toChunkId(chunkX, chunkZ)
-
-        val chunkSection = chunks.get(pos) ?: return null
-        val y = (at.y - dimensionInfo.minHeight) / 16
-        return chunkSection.chunks[y]
+        return chunks.get(pos)
     }
 
-    internal fun writeChunkData(chunkX: Int, chunkZ: Int): ByteString = worldLock.read {
-        val buf = Buffer()
-        val sectionId = toChunkId(chunkX.toLong(), chunkZ.toLong())
-        val chunkSection = chunks.get(sectionId) ?: error("no such chunk: $chunkX,$chunkZ")
-
-        chunkSection.serialiseBlockStates(server.data.blockStates, buf)
-        buf.readByteString()
+    /**
+     * Gets the chunk column for the block at [pos].
+     */
+    public fun getChunkColumn(pos: WorldPosition): ChunkColumn? {
+        return getChunkColumn(pos.x.toLong().floorDiv(16), pos.z.toLong().floorDiv(16))
     }
 
     /**
      * Gets the block type at the specified position.
      */
-    override fun getBlockType(at: WorldPosition): BlockType = worldLock.read {
-        val chunk = getChunk(at) ?: error("no such chunk: $at")
-        val id = chunk.getBlockTypeId(at.x.mod(16), at.y.mod(16), at.z.mod(16))
+    override fun getBlockType(at: WorldPosition): BlockType {
+        val column = getChunkColumn(at) ?: error("no column loaded at $at")
+        val id = column.getBlockId(at.x.mod(16), at.y, at.z.mod(16))
         return server.data.blocks.getThingFromId(id)
     }
 
     /**
      * Gets the raw metadata value at the specified position.
      */
-    override fun getBlockMetadata(at: WorldPosition): UInt = worldLock.read {
-        val chunk = getChunk(at) ?: error("no such chunk: $at")
-        return chunk.getBlockMeta(at.x.mod(16), at.y.mod(16), at.z.mod(16))
+    override fun getBlockMetadata(at: WorldPosition): UInt {
+        val column = getChunkColumn(at) ?: error("no column loaded at $at")
+        return column.getBlockMetadata(at.x.mod(16), at.y, at.z.mod(16))
     }
 
     /**
      * Sets the block at the specified position to be the [blockType], with the specified
      * [metadata].
      */
-    override fun setBlock(at: WorldPosition, blockType: BlockType, metadata: Int): Unit = worldLock.write {
-        val chunkX = at.x.floorDiv(16L)
-        val chunkZ = at.z.floorDiv(16L)
-        val chunk = getChunk(at) ?: error("no such chunk: $at")
+    override fun setBlock(at: WorldPosition, blockType: BlockType, metadata: UInt): Unit {
+        val column = getChunkColumn(at) ?: error("no column loaded at $at")
         val blockId = server.data.blocks.getNumericId(blockType)
-        chunk.setBlock(
-            at.x.mod(16), at.y.mod(16), at.z.mod(16),
-            blockId, metadata
-        )
+        column.setBlock(at.x.mod(16), at.y, at.z.mod(16), blockId, metadata)
     }
 
     override fun <D : EntityData, E : Entity<D, E>> spawnEntity(
@@ -153,7 +147,7 @@ public class WorldImpl(
     ): E {
         val nextId = Entity.nextEntityId()
         val entity = worldLock.write {
-            val newEntity = entityType.create(nextId, pos, data)
+            val newEntity = entityType.create(nextId, this, pos, data)
             knownEntites[nextId] = newEntity
             newEntity
         }

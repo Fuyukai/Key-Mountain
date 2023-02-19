@@ -25,10 +25,11 @@ import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
+import tf.veriny.keymountain.api.network.packets.S2CChunkData
 import tf.veriny.keymountain.api.network.packets.S2CDisconnectPlay
 import tf.veriny.keymountain.api.network.packets.S2CPluginMessage
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
-import tf.veriny.keymountain.network.ClientListener
+import tf.veriny.keymountain.network.ClientNetworker
 import java.io.EOFException
 import java.net.Socket
 import java.util.*
@@ -54,7 +55,7 @@ public class ClientConnection(
         private val LOGGER = LogManager.getLogger(ClientConnection::class.java)
     }
 
-    private val network = ClientListener(
+    private val network = ClientNetworker(
         this,
         server.networker,
         server.data.packets,
@@ -96,6 +97,15 @@ public class ClientConnection(
         network.state = state
     }
 
+    override fun enqueueChunkData(chunkX: Long, chunkZ: Long) {
+        if (stillReceivingPackets) {
+            val entity = this.entity ?: error("This client is not in a world!")
+            val world = entity.world
+
+            network.outgoingChunks.put(Triple(world.columnSerialiser, chunkX, chunkZ))
+        }
+    }
+
     override fun enqueueProtocolPacket(packet: ProtocolPacket): Unit {
         if (stillReceivingPackets) {
             network.enqueueBasePacket(packet)
@@ -129,7 +139,7 @@ public class ClientConnection(
             network.run()
         } catch (e: EOFException) {
             // client disconnected
-            ClientListener.LOGGER.debug("Client disconnected")
+            ClientNetworker.LOGGER.debug("Client disconnected")
         } catch (e: Exception) {
             if (e.cause !is EOFException) {
                 LOGGER.warn("Error in client connection", e)

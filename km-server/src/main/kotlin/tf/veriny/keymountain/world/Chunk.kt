@@ -16,6 +16,8 @@
 
 package tf.veriny.keymountain.world
 
+import java.util.concurrent.atomic.AtomicLongArray
+
 // TODO: we use the silly unoptimised mechanism of *long[][][] for simplicity right now but we could
 //       definitely optimise this further, e.g. interval lists on columns.
 
@@ -26,8 +28,25 @@ package tf.veriny.keymountain.world
 public class Chunk {
     private val blocks = Array(16) {
         Array(16) {
-            LongArray(16)
+            AtomicLongArray(16)
         }
+    }
+
+    /**
+     * Creates a fresh deep copy of this chunk.
+     */
+    public fun copy(): Chunk {
+        val next = Chunk()
+
+        for (x in 0 until 16) {
+            for (z in 0 until 16) {
+                for (y in 0 until 16) {
+                    next.blocks[x][z][y] = blocks[x][z][y]
+                }
+            }
+        }
+
+        return next
     }
 
     public fun get(x: Int, y: Int, z: Int): Long {
@@ -44,7 +63,7 @@ public class Chunk {
         return rawId.toUInt()
     }
 
-    public fun setBlock(x: Int, y: Int, z: Int, block: Int, metadata: Int) {
+    public fun setBlock(x: Int, y: Int, z: Int, block: Int, metadata: UInt) {
         val rawData = (block.toLong().shl(32)).or(metadata.toLong())
         blocks[x][z][y] = rawData
     }

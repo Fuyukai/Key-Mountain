@@ -7,6 +7,7 @@
 package tf.veriny.keymountain.api.entity
 
 import tf.veriny.keymountain.api.util.Identifiable
+import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.api.world.block.WorldPosition
 
 /**
@@ -24,5 +25,5 @@ public interface EntityType<D : EntityData, T : Entity<D, T>> : Identifiable {
      * state [data]. If this method is called, it is guaranteed that the entity will be added
      * to the world.
      */
-    public fun create(entityId: Int, pos: WorldPosition, data: D?): T
+    public fun create(entityId: Int, into: World, pos: WorldPosition, data: D?): T
 }

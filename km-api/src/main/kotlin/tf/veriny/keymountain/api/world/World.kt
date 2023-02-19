@@ -6,6 +6,8 @@
 
 package tf.veriny.keymountain.api.world
 
+import okio.Buffer
+import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.Entity
 import tf.veriny.keymountain.api.entity.EntityData
 import tf.veriny.keymountain.api.entity.EntityType
@@ -16,6 +18,10 @@ import tf.veriny.keymountain.api.world.block.WorldPosition
  * A single world instance simulating a single dimension.
  */
 public interface World {
+    /** The column serialiser for this world. */
+    public val columnSerialiser: ChunkColumnSerialiser
+
+    // == blocks == //
     /**
      * Gets the block type at the specified position.
      */
@@ -30,8 +36,9 @@ public interface World {
      * Sets the block at the specified position to be the [blockType], with the specified
      * [metadata].
      */
-    public fun setBlock(at: WorldPosition, blockType: BlockType, metadata: Int = 0)
+    public fun setBlock(at: WorldPosition, blockType: BlockType, metadata: UInt = 0U)
 
+    // == entities == //
     /**
      * Spawns an entity into this world from the provided entity type.
      */

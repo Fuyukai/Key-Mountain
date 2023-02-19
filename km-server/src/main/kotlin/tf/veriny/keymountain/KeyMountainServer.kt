@@ -47,11 +47,10 @@ public class KeyMountainServer(public val data: Data) {
         private val LOGGER = LogManager.getLogger(KeyMountainServer::class.java)
     }
 
-    // then utilities that would otherwise need the registries
     public val networker: ServerNetworker = ServerNetworker(this)
-
     public val jsonMapper: ObjectMapper = ObjectMapper().registerKotlinModule()
 
+    // todo: better
     public val worlds: List<World> = mutableListOf()
 
     private fun acceptAndDispatch(sock: ServerSocket, executor: ExecutorService) {

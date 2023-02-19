@@ -24,15 +24,12 @@ import okio.sink
 import okio.source
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.api.PayloadTooLongException
-import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
-import tf.veriny.keymountain.api.network.packets.C2SHandshake
-import tf.veriny.keymountain.api.network.packets.C2SKeepAlive
-import tf.veriny.keymountain.api.network.packets.S2CDisconnectPlay
-import tf.veriny.keymountain.api.network.packets.S2CKeepAlive
+import tf.veriny.keymountain.api.network.packets.*
 import tf.veriny.keymountain.api.util.readVarInt
 import tf.veriny.keymountain.api.util.writeVarInt
+import tf.veriny.keymountain.api.world.ChunkColumnSerialiser
 import tf.veriny.keymountain.client.ClientConnection
 import java.io.EOFException
 import java.net.Socket
@@ -46,20 +43,21 @@ import kotlin.random.asKotlinRandom
 /**
  * Handles incoming connections from a client.
  */
-internal class ClientListener(
+internal class ClientNetworker(
     private val clientReference: ClientConnection,
     private val networker: ServerNetworker,
     private val packetRegistry: PacketRegistryImpl,
     private val clientSocket: Socket,
 ) : Runnable {
     public companion object {
-        internal val LOGGER = LogManager.getLogger(ClientListener::class.java)
+        internal val LOGGER = LogManager.getLogger(ClientNetworker::class.java)
 
         private val secure = SecureRandom.getInstanceStrong().asKotlinRandom()
     }
 
     private val incomingPackets: Offerable<IncomingPacket> = networker.getSubQueue(clientReference)
     private val outgoingPackets = LinkedBlockingQueue<OutgoingPacket>()
+    internal val outgoingChunks = LinkedBlockingQueue<Triple<ChunkColumnSerialiser, Long, Long>>()
 
     internal var state: NetworkState = NetworkState.HANDSHAKE
     internal var isClosing = false
@@ -90,6 +88,18 @@ internal class ClientListener(
             enqueueBasePacket(S2CKeepAlive(id))
 
             Thread.sleep(Duration.ofSeconds(5L))
+        }
+    }
+
+    private fun runChunkDataSerialiser() {
+        while (!(clientSocket.isClosed || isClosing)) {
+            val (serialiser, chunkX, chunkZ) = outgoingChunks.take()
+
+            val buffer = Buffer()
+            serialiser.writeForNetwork(clientReference, chunkX, chunkZ, buffer)
+            val packet = S2CChunkData(chunkX, chunkZ, buffer)
+
+            enqueueBasePacket(packet)
         }
     }
 
@@ -199,6 +209,7 @@ internal class ClientListener(
             it.fork(::runSocketReader)
             it.fork(::runSocketWriter)
             it.fork(::runKeepAlive)
+            it.fork(::runChunkDataSerialiser)
 
             it.join()
             it.throwIfFailed()

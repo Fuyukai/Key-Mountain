@@ -39,6 +39,11 @@ public interface ClientReference {
     /** Changes the state of this client reference to the specified network state. */
     public fun transitionToState(state: NetworkState)
 
+    /**
+     * Enqueues the data for a single chunk column at (x, z) to the client. This will internally
+     * deal with serialising on a separate thread.
+     */
+    public fun enqueueChunkData(chunkX: Long, chunkZ: Long)
 
     /**
      * Enqueues a single base packet for later sending to the client. This will be sent out using
