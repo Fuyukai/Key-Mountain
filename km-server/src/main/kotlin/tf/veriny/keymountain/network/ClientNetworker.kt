@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit
 import kotlin.random.asKotlinRandom
 
 /**
- * Handles incoming connections from a client.
+ * Handles sending packets to and from the client.
  */
 internal class ClientNetworker(
     private val clientReference: KeyMountainClient,
@@ -51,8 +51,7 @@ internal class ClientNetworker(
 ) : Runnable {
     public companion object {
         internal val LOGGER = LogManager.getLogger(ClientNetworker::class.java)
-
-        private val secure = SecureRandom.getInstanceStrong().asKotlinRandom()
+        private val SECURE_RANDOM = SecureRandom.getInstanceStrong().asKotlinRandom()
     }
 
     private val incomingPackets: Offerable<IncomingPacket> = networker.getSubQueue(clientReference)
@@ -83,7 +82,7 @@ internal class ClientNetworker(
                 throw EOFException()
             }
 
-            val id = secure.nextLong()
+            val id = SECURE_RANDOM.nextLong()
             keepAliveQueue.addLast(id)
             enqueueBasePacket(S2CKeepAlive(id))
 
@@ -186,13 +185,15 @@ internal class ClientNetworker(
             sink.write(buffer, buffer.size)
             sink.flush()
 
-            if (next is S2CDisconnectPlay) {
-                LOGGER.info("Disconnecting client!")
-                isClosing = true
-                throw EOFException()
-            }
-
             LOGGER.trace("successfully written and flushed packet!")
+
+            when (next) {
+                is S2CDisconnectPlay, is S2CStatusPong -> {
+                    LOGGER.info("Disconnecting client!")
+                    isClosing = true
+                    throw EOFException()
+                }
+            }
         }
     }
 
@@ -204,6 +205,8 @@ internal class ClientNetworker(
     }
 
     override fun run() {
+        Thread.currentThread().name = "KeyMountain-Client-ThreadHolder"
+
         LOGGER.debug("Starting client listener for {}", clientSocket.remoteSocketAddress)
         StructuredTaskScope.ShutdownOnFailure().use {
             it.fork(::runSocketReader)
