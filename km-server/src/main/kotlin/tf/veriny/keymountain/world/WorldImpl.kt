@@ -218,20 +218,19 @@ public class WorldImpl(
     }
 
     private fun sendEntityMovePackets(event: EntityMoveEvent) {
+        val packet = S2CTeleportEntity(
+            event.entity.uniqueId,
+            event.entity.position.x,
+            event.entity.position.y,
+            event.entity.position.z,
+            event.entity.yaw,
+            event.entity.pitch,
+            true
+        )
+
         for (player in players) {
             // don't send players their own update packet
             if (event.entity == player.entity) continue
-
-            val packet = S2CTeleportEntity(
-                event.entity.uniqueId,
-                event.entity.position.x,
-                event.entity.position.y,
-                event.entity.position.z,
-                event.entity.yaw,
-                event.entity.pitch,
-                true
-            )
-
             player.enqueueProtocolPacket(packet)
         }
     }
