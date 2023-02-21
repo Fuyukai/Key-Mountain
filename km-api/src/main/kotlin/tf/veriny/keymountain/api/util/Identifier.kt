@@ -12,24 +12,34 @@ private val valueRegexp = "[a-z0-9.-_/]*".toRegex()
 /**
  * Uniquely identifies a single resource in the game.
  */
-@JvmInline
-public value class Identifier(public val full: String) {
+public class Identifier(public val full: String) {
     public constructor(namespace: String, thing: String) : this("$namespace:$thing")
+
+    public val namespace: String
+    public val thing: String
 
     init {
         val (sp1, sp2) = full.split(':', limit = 2)
+        namespace = sp1
+        thing = sp2
 
-        if (!namespaceRegexp.matches(sp1)) throw IllegalArgumentException(sp1)
-        if (!valueRegexp.matches(sp2)) throw IllegalArgumentException(sp2)
+        if (!namespaceRegexp.matches(namespace)) throw IllegalArgumentException(namespace)
+        if (!valueRegexp.matches(thing)) throw IllegalArgumentException(thing)
     }
+
+    override fun hashCode(): Int {
+        return full.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (other === this) return true
+        if (other !is Identifier) return false
+
+        return other.full == full
+    }
+
 
     override fun toString(): String {
         return full
     }
 }
-
-public val Identifier.namespace: String
-    get() = (full.split(':', limit = 2))[0]
-
-public val Identifier.thing: String
-    get() = (full.split(':', limit = 2))[1]
