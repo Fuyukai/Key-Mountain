@@ -25,7 +25,6 @@ import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
-import tf.veriny.keymountain.api.network.packets.S2CChunkData
 import tf.veriny.keymountain.api.network.packets.S2CDisconnectPlay
 import tf.veriny.keymountain.api.network.packets.S2CPluginMessage
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
@@ -47,12 +46,12 @@ import java.util.*
 /**
  * A single, connected client.
  */
-public class ClientConnection(
+public class KeyMountainClient(
     private val server: KeyMountainServer,
     private val socket: Socket
 ) : ClientReference, Runnable {
     private companion object {
-        private val LOGGER = LogManager.getLogger(ClientConnection::class.java)
+        private val LOGGER = LogManager.getLogger(KeyMountainClient::class.java)
     }
 
     private val network = ClientNetworker(
@@ -148,8 +147,6 @@ public class ClientConnection(
             }
         } finally {
             server.networker.removeSubQueue(this)
-            val entity = this.entity
-
             server.removePlayer(this)
             network.isClosing = true
         }

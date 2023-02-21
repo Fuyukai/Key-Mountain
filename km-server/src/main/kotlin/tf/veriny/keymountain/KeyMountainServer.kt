@@ -19,20 +19,21 @@ package tf.veriny.keymountain
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import jdk.incubator.concurrent.StructuredTaskScope
+import okio.withLock
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.api.client.ClientReference
-import tf.veriny.keymountain.api.entity.PlayerEntity
+import tf.veriny.keymountain.api.network.packets.S2CPlayerInfoUpdate
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.World
-import tf.veriny.keymountain.client.ClientConnection
+import tf.veriny.keymountain.client.KeyMountainClient
 import tf.veriny.keymountain.data.Data
 import tf.veriny.keymountain.network.ServerNetworker
 import tf.veriny.keymountain.world.WorldImpl
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.*
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * The primary server class. This contains references to all the helper classes and state objects,
@@ -53,19 +54,37 @@ public class KeyMountainServer(public val data: Data) {
     public val jsonMapper: ObjectMapper = ObjectMapper().registerKotlinModule()
 
     /** The map of players currently connected to the server. */
+    private val playerLock = ReentrantLock()
     public val players: MutableMap<UUID, ClientReference> = mutableMapOf()
 
     // todo: better
     public val worlds: List<World> = mutableListOf()
 
     /**
+     * Adds a new player to the global list of players.
+     */
+    public fun addPlayer(ref: ClientReference): Unit = playerLock.withLock {
+        for (otherPlayer in players.values) {
+            // notify other players that this player exists
+            val infoUpdateForOthers = S2CPlayerInfoUpdate(
+                ref.loginInfo.uuid,
+                S2CPlayerInfoUpdate.AddPlayer(ref.loginInfo.username, mapOf()),
+                S2CPlayerInfoUpdate.UpdateListed(true)
+            )
+            otherPlayer.enqueueProtocolPacket(infoUpdateForOthers)
+        }
+
+        players[ref.loginInfo.uuid] = ref
+    }
+
+    /**
      * Removes a player from the current server.
      */
-    public fun removePlayer(player: ClientReference) {
+    public fun removePlayer(player: ClientReference): ClientReference? = playerLock.withLock {
         // TODO: broadcast to other players...
         val entity = player.entity
         if (entity != null) {
-            worlds.forEach { it.removeEntity<PlayerEntity>(entity.uniqueId) }
+            worlds.forEach { it.removePlayer(player) }
         }
 
         players.remove(player.loginInfo.uuid)
@@ -79,7 +98,7 @@ public class KeyMountainServer(public val data: Data) {
         while (true) {
             val next = sock.accept()
             LOGGER.debug("Accepted new connection from {}!", next.remoteSocketAddress)
-            it.submit(ClientConnection(this, next))
+            it.submit(KeyMountainClient(this, next))
         }
     }
 
@@ -94,6 +113,11 @@ public class KeyMountainServer(public val data: Data) {
 
         it.fork { acceptNewConnections(sock) }
         it.fork { networker.run() }
+        for (world in worlds) {
+            if (world is Runnable) {
+                it.fork { world.run() }
+            }
+        }
 
         it.join()
         it.throwIfFailed()

@@ -39,4 +39,18 @@ public interface Entity<Data : EntityData, Self : Entity<Data, Self>> {
     // TODO: can we pack this into two longs? WorldPosition + offset, stored in three 16-bit floats
     //  would save 4 bytes per entity over 3 doubles
     public val position: Vector3
+
+    // rotation properties, only really used by other clients...
+    public var yaw: Float
+    public var pitch: Float
+
+    /**
+     * Sets the position of this entity.
+     */
+    public fun setPosition(x: Double, y: Double, z: Double) {
+        position.x = x
+        position.y = y
+        position.z = z
+    }
+
 }

@@ -30,7 +30,7 @@ import tf.veriny.keymountain.api.network.packets.*
 import tf.veriny.keymountain.api.util.readVarInt
 import tf.veriny.keymountain.api.util.writeVarInt
 import tf.veriny.keymountain.api.world.ChunkColumnSerialiser
-import tf.veriny.keymountain.client.ClientConnection
+import tf.veriny.keymountain.client.KeyMountainClient
 import java.io.EOFException
 import java.net.Socket
 import java.security.SecureRandom
@@ -44,7 +44,7 @@ import kotlin.random.asKotlinRandom
  * Handles incoming connections from a client.
  */
 internal class ClientNetworker(
-    private val clientReference: ClientConnection,
+    private val clientReference: KeyMountainClient,
     private val networker: ServerNetworker,
     private val packetRegistry: PacketRegistryImpl,
     private val clientSocket: Socket,

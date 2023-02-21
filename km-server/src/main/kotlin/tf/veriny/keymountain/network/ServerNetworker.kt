@@ -22,7 +22,6 @@ import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.KeyMountainServer
 import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.data.VanillaSynchronisableRegistry
-import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.NetworkState.*
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.packets.*
@@ -31,7 +30,6 @@ import tf.veriny.keymountain.api.network.plugin.PluginPacket
 import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.world.GameMode
 import tf.veriny.keymountain.api.world.block.WorldPosition
-import tf.veriny.keymountain.world.WorldImpl
 
 /**
  * Routes incoming packets from clients and updates the server state appropriately.
@@ -145,35 +143,11 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         // TODO: Split this out into a full method!
 
         // 1) Add the player to the server
-        server.players[ref.loginInfo.uuid] = ref
-        // 2) Tell the player about other players, and also tell all other players about this new
-        //    player.
-        val otherPlayers = server.players.values.toList()
-        for (player in otherPlayers) {
-            val infoUpdateForConnector = S2CPlayerInfoUpdate(
-                player.loginInfo.uuid,
-                S2CPlayerInfoUpdate.AddPlayer(player.loginInfo.username, mapOf()),
-                S2CPlayerInfoUpdate.UpdateListed(true)
-            )
-            ref.enqueueProtocolPacket(infoUpdateForConnector)
+        server.addPlayer(ref)
+        val world = server.worlds.first()
+        val playerEntity = world.addPlayer(ref)
 
-            // make sure we don't accidentally send the client an extra packet
-            if (player != ref) {
-                val infoUpdateForOthers = S2CPlayerInfoUpdate(
-                    ref.loginInfo.uuid,
-                    S2CPlayerInfoUpdate.AddPlayer(ref.loginInfo.username, mapOf()),
-                    S2CPlayerInfoUpdate.UpdateListed(true)
-                )
-                player.enqueueProtocolPacket(infoUpdateForOthers)
-            }
-        }
-
-        // spawn the player
-        val world = server.worlds.first() as WorldImpl
-        val playerEntity = world.spawnEntity(PlayerEntity, WorldPosition(0, 0, 128), null)
-        ref.entity = playerEntity
-
-        // send all the various play packets
+        // 2) Send the "start playing" packet.
         val startPlaying = S2CStartPlaying(
             entityId = playerEntity.uniqueId,
             isHardcore = false,
@@ -181,12 +155,31 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             dimensionIds = server.data.dimensions.getAllEntries().map { it.identifier },
             synchronisedRegisteries = listOf(server.data.dimensions, server.data.biomeNetworkData) as List<VanillaSynchronisableRegistry<Identifiable>>,
             dimensionType = "minecraft:overworld",
-            viewDistance = 12, clientRenderDistance = 7,
+            viewDistance = 7, clientRenderDistance = 7,
             enableRespawn = false, isFlat = true
         )
         ref.enqueueProtocolPacket(startPlaying)
 
         ref.enqueuePluginPacket(BidiBrand("key-mountain"))
+
+        // 2) Tell the player about other players in the world.
+        val otherPlayers = server.players.values.toList()
+        for (otherPlayer in otherPlayers) {
+            // if check is down there rather than up here because for some reason the client
+            // needs its own info update...?
+            val infoUpdatePacket = S2CPlayerInfoUpdate(
+                otherPlayer.loginInfo.uuid,
+                S2CPlayerInfoUpdate.AddPlayer(otherPlayer.loginInfo.username, mapOf()),
+                S2CPlayerInfoUpdate.UpdateListed(true)
+            )
+            ref.enqueueProtocolPacket(infoUpdatePacket)
+
+            if (otherPlayer != ref) {
+                val spawnForConnector = S2CSpawnPlayer.from(otherPlayer)
+                ref.enqueueProtocolPacket(spawnForConnector)
+            }
+        }
+
 
         // ack!
         for (chunkX in -7..7) {
@@ -199,7 +192,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         ref.enqueueProtocolPacket(setSpawnPosition)
 
         val setPositionPacket = S2CForcePlayerPosition(
-            0.0, 0.0, 420.0,
+            playerEntity.position.x, playerEntity.position.z, playerEntity.position.y,
             0f, 0f, 0, 1234567, true
         )
         ref.enqueueProtocolPacket(setPositionPacket)
@@ -210,6 +203,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         LOGGER.debug("client {}'s settings: {}", ref.loginInfo.username, packet)
     }
 
+    // Note: The world automatically synchronises positions to all other players.
     private fun commonHandleSetPlayerPosition(
         ref: ClientReference,
         packet: C2SSetPlayerPosition,
@@ -227,6 +221,11 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         entity.position.x = packet.x
         entity.position.z = packet.z
         entity.position.y = packet.feetY
+
+        if (rotation != null) {
+            entity.yaw = rotation.yaw
+            entity.pitch = rotation.pitch
+        }
     }
 
     private fun handleSetPlayerPositionPacket(ref: ClientReference, packet: C2SSetPlayerPosition) {
@@ -238,7 +237,14 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
     }
 
     private fun handleSetPlayerRotationPacket(ref: ClientReference, packet: C2SSetPlayerRotation) {
-        // pass
+        val entity = ref.entity
+        if (entity == null) {
+            LOGGER.error("client sent a set player position before they exist??")
+            return ref.die("Illegal move packet")
+        }
+
+        entity.yaw = packet.yaw
+        entity.pitch = packet.pitch
     }
 
     private fun handleConfirmTeleportationPacket(ref: ClientReference, packet: C2SConfirmTeleportation) {
@@ -278,6 +284,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addOutgoingPacket(PLAY, S2CForcePlayerPosition.PACKET_ID, S2CForcePlayerPosition)
         packets.addOutgoingPacket(PLAY, S2CChunkData.PACKET_ID, S2CChunkData)
         packets.addOutgoingPacket(PLAY, S2CPlayerInfoUpdate.PACKET_ID, S2CPlayerInfoUpdate)
+        packets.addOutgoingPacket(PLAY, S2CSpawnPlayer.PACKET_ID, S2CSpawnPlayer)
 
         packets.addIncomingPacket(BidiBrand.ID, BidiBrand, ::handleBrandPacket)
         packets.addOutgoingPacket(BidiBrand.ID, BidiBrand)

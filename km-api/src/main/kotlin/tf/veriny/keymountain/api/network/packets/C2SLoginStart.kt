@@ -29,7 +29,7 @@ public class C2SLoginStart(
             val username = data.readMcString()
             val hasUuid = data.readBoolean()
             val uuid = if (hasUuid) {
-                data.readUUID()
+                data.readUuid()
             } else null
 
             return C2SLoginStart(username, uuid)

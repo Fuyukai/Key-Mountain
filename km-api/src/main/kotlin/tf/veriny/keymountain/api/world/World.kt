@@ -11,6 +11,7 @@ import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.Entity
 import tf.veriny.keymountain.api.entity.EntityData
 import tf.veriny.keymountain.api.entity.EntityType
+import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.world.block.BlockType
 import tf.veriny.keymountain.api.world.block.WorldPosition
 
@@ -39,6 +40,16 @@ public interface World {
     public fun setBlock(at: WorldPosition, blockType: BlockType, metadata: UInt = 0U)
 
     // == entities == //
+    /**
+     * Adds a new player to this world, returning the newly created player entity.
+     */
+    public fun addPlayer(ref: ClientReference): PlayerEntity
+
+    /**
+     * Removes a player from this world. It's okay if the player doesn't exist in this world.
+     */
+    public fun removePlayer(ref: ClientReference)
+
     /**
      * Spawns an entity into this world from the provided entity type.
      */

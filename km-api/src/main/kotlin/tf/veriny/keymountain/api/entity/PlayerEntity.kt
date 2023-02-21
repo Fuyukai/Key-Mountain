@@ -10,6 +10,7 @@ import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.util.Vector3
 import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.api.world.block.WorldPosition
+import java.util.concurrent.atomic.AtomicBoolean
 
 public class PlayerEntity(
     override val uniqueId: Int,
@@ -30,10 +31,20 @@ public class PlayerEntity(
 
     public class PlayerEntityData : EntityData
 
+    /** If True, then this player needs a position sync. */
+    public val needsPositionSync: AtomicBoolean = AtomicBoolean(false)
+
     override var world: World = world
         private set
 
     override val type: Companion get() = Companion
 
     override val position: Vector3 = Vector3(0.0, 0.0, 0.0)
+    override var pitch: Float = 0.0f
+    override var yaw: Float = 0.0f
+
+    override fun setPosition(x: Double, y: Double, z: Double) {
+        super.setPosition(x, y, z)
+        needsPositionSync.set(true)
+    }
 }

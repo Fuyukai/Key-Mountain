@@ -72,10 +72,20 @@ public fun BufferedSource.readMcString(): String {
 }
 
 /** Reads a single long-encoded UUID. */
-public fun BufferedSource.readUUID(): UUID {
+public fun BufferedSource.readUuid(): UUID {
     val upper = readLong()
     val lower = readLong()
     return UUID(upper, lower)
+}
+
+/** Reads a single float. */
+public fun BufferedSource.readFloat(): Float {
+    return Float.fromBits(readInt())
+}
+
+/** Reads a single double. */
+public fun BufferedSource.readDouble(): Double {
+    return Double.fromBits(readLong())
 }
 
 /**
@@ -125,6 +135,20 @@ public fun BufferedSink.writeMcString(s: String) {
 public fun BufferedSink.writeUuid(u: UUID) {
     writeLong(u.mostSignificantBits)
     writeLong(u.leastSignificantBits)
+}
+
+/** Writes a single float. */
+public fun BufferedSink.writeFloat(f: Float) {
+    writeInt(f.toBits())
+}
+
+/** Writes a single double. */
+public fun BufferedSink.writeDouble(d: Double) {
+    writeLong(d.toBits())
+}
+
+public fun BufferedSink.writeAngle(angle: Float) {
+    writeByte((angle * 256.0f / 360.0f).toInt())
 }
 
 public fun BufferedSink.writeBitSet(bs: BitSet) {

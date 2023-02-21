@@ -18,15 +18,16 @@ package tf.veriny.keymountain.world
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
-import lbmq.LinkedBlockingMultiQueue
-import okio.Buffer
-import okio.ByteString
+import jdk.incubator.concurrent.StructuredTaskScope
 import org.apache.logging.log4j.LogManager
 import tf.veriny.keymountain.KeyMountainServer
 import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.Entity
 import tf.veriny.keymountain.api.entity.EntityData
 import tf.veriny.keymountain.api.entity.EntityType
+import tf.veriny.keymountain.api.entity.PlayerEntity
+import tf.veriny.keymountain.api.network.packets.S2CPlayerInfoUpdate
+import tf.veriny.keymountain.api.network.packets.S2CSpawnPlayer
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.ChunkColumnSerialiser
 import tf.veriny.keymountain.api.world.DimensionInfo
@@ -34,15 +35,19 @@ import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.api.world.block.BlockType
 import tf.veriny.keymountain.api.world.block.WorldPosition
 import tf.veriny.keymountain.network.ChunkColumnSerialiserImpl
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
+import kotlin.time.ExperimentalTime
 
 // This is the "core" simulation unit for Key Mountain.
 
 /**
  * A single simulated world. A world contains a (near-infinite) amount of chunk sections.
  */
+@OptIn(ExperimentalTime::class)
 public class WorldImpl(
     private val server: KeyMountainServer,
     public val dimensionInfo: DimensionInfo
@@ -84,13 +89,48 @@ public class WorldImpl(
     // probably not the best structure, but
     private val chunks = Long2ObjectOpenHashMap<ChunkColumn>()
 
-    private val events = LinkedBlockingMultiQueue<Unit, Unit>()
+    // TODO: consider if this should be a multiqueue?
+    private val events = LinkedBlockingQueue<WorldEvent>()
 
     // Used to lock access to world-specific data.
     private val worldLock = ReentrantReadWriteLock()
 
+    // connected players, used to reflect events to other players
+    private val players = mutableListOf<ClientReference>()
+
     // mapping of entity id: entity
     private val knownEntites = Int2ObjectOpenHashMap<Entity<*, *>>()
+
+    public var tickCounter: Long = 0L
+        private set
+
+    /**
+     * Adds a new player to this world.
+     */
+    override fun addPlayer(ref: ClientReference): PlayerEntity = worldLock.write {
+        val entity = spawnEntity(
+            PlayerEntity, WorldPosition(0, 0, 132), PlayerEntity.PlayerEntityData()
+        )
+        ref.entity = entity
+        players.add(ref)
+
+        events.put(PlayerSpawnEvent(ref))
+        return entity
+    }
+
+    override fun removePlayer(ref: ClientReference): Unit = worldLock.write {
+        val it = players.listIterator()
+        for (player in it) {
+            if (player == ref) {
+                it.remove()
+
+                val entity = player.entity!!
+                assert(entity.world == this)
+                removeEntity(entity.uniqueId)
+                break
+            }
+        }
+    }
 
     /**
      * Gets the chunk column at ([chunkX], [chunkZ]).
@@ -136,7 +176,7 @@ public class WorldImpl(
 
     override fun <D : EntityData, E : Entity<D, E>> spawnEntity(
         entityType: EntityType<D, E>, pos: WorldPosition, data: D?
-    ): E {
+    ): E = worldLock.write {
         val nextId = Entity.nextEntityId()
         val entity = worldLock.write {
             val newEntity = entityType.create(nextId, this, pos, data)
@@ -152,19 +192,67 @@ public class WorldImpl(
     }
 
     // todo: type safety I guess?
-    override fun <E : Entity<*, E>> getEntity(id: Int): E? {
+    override fun <E : Entity<*, E>> getEntity(id: Int): E? = worldLock.read {
         return knownEntites[id] as E?
     }
 
-    override fun <E : Entity<*, E>> removeEntity(id: Int): E? {
+    override fun <E : Entity<*, E>> removeEntity(id: Int): E? = worldLock.write {
         return knownEntites.remove(id) as E?
+    }
+
+    // == Event dispatch == //
+    private fun sendPlayerSpawnPackets(event: PlayerSpawnEvent) {
+        for (player in players) {
+            if (player == event.ref) continue
+            LOGGER.debug("sending a spawn event for ${event.ref.loginInfo.username} to ${player.loginInfo.username}")
+
+            val packet = S2CSpawnPlayer.from(event.ref)
+            player.enqueueProtocolPacket(packet)
+        }
+    }
+
+    // == Simulation == //
+    // We have four separate methods here working in parallel.
+    // 1) The event drainer, which takes events from the queue, transforms them, and reflects
+    //    them back to clients.
+    // 2) The ticker, which keeps a consistent tick count by waking up the cyclic barrier every
+    //    50ms (or, every multiple of 50ms).
+    // 3) The block entity simulator, which uses coroutines to simulate block entities.
+    // 4) The regular entity simulator, which uses coroutines to simulate regular entities.
+
+    private val synchroniser = CyclicBarrier(3)
+
+    private fun runTicker() {
+        while (true) {
+            Thread.sleep(999999999999999)
+        }
+    }
+
+    /**
+     * Drains incoming world events and reflects them to clients.
+     */
+    private fun runEventDrainer() {
+        Thread.currentThread().name = "KeyMountain-WorldSimEvents-${dimensionInfo.identifier.full}"
+
+        while (true) {
+            when (val next = events.take()) {
+                is PlayerSpawnEvent -> {
+                    sendPlayerSpawnPackets(next)
+                }
+            }
+        }
     }
 
     override fun run() {
         Thread.currentThread().name = "KeyMountain-WorldSim-${dimensionInfo.identifier.full}"
+        LOGGER.info("Starting world simulation thread...")
 
-        while (true) {
-            TODO()
+        StructuredTaskScope.ShutdownOnFailure().use {
+            it.fork(::runTicker)
+            it.fork(::runEventDrainer)
+
+            it.join()
+            it.throwIfFailed()
         }
     }
 }
