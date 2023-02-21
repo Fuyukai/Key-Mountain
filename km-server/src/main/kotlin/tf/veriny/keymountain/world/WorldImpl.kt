@@ -26,8 +26,8 @@ import tf.veriny.keymountain.api.entity.Entity
 import tf.veriny.keymountain.api.entity.EntityData
 import tf.veriny.keymountain.api.entity.EntityType
 import tf.veriny.keymountain.api.entity.PlayerEntity
-import tf.veriny.keymountain.api.network.packets.S2CPlayerInfoUpdate
 import tf.veriny.keymountain.api.network.packets.S2CSpawnPlayer
+import tf.veriny.keymountain.api.network.packets.S2CTeleportEntity
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.world.ChunkColumnSerialiser
 import tf.veriny.keymountain.api.world.DimensionInfo
@@ -35,8 +35,12 @@ import tf.veriny.keymountain.api.world.World
 import tf.veriny.keymountain.api.world.block.BlockType
 import tf.veriny.keymountain.api.world.block.WorldPosition
 import tf.veriny.keymountain.network.ChunkColumnSerialiserImpl
+import java.util.*
 import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -101,8 +105,10 @@ public class WorldImpl(
     // mapping of entity id: entity
     private val knownEntites = Int2ObjectOpenHashMap<Entity<*, *>>()
 
-    public var tickCounter: Long = 0L
-        private set
+    /**
+     * The number of ticks this world has processed. Don't set this!
+     */
+    public val tickCounter: AtomicLong = AtomicLong()
 
     /**
      * Adds a new player to this world.
@@ -211,6 +217,25 @@ public class WorldImpl(
         }
     }
 
+    private fun sendEntityMovePackets(event: EntityMoveEvent) {
+        for (player in players) {
+            // don't send players their own update packet
+            if (event.entity == player.entity) continue
+
+            val packet = S2CTeleportEntity(
+                event.entity.uniqueId,
+                event.entity.position.x,
+                event.entity.position.y,
+                event.entity.position.z,
+                event.entity.yaw,
+                event.entity.pitch,
+                true
+            )
+
+            player.enqueueProtocolPacket(packet)
+        }
+    }
+
     // == Simulation == //
     // We have four separate methods here working in parallel.
     // 1) The event drainer, which takes events from the queue, transforms them, and reflects
@@ -219,12 +244,77 @@ public class WorldImpl(
     //    50ms (or, every multiple of 50ms).
     // 3) The block entity simulator, which uses coroutines to simulate block entities.
     // 4) The regular entity simulator, which uses coroutines to simulate regular entities.
+    // 5) The player entity updater, which sends position update packets for changed player positions
+    //    every tick.
 
-    private val synchroniser = CyclicBarrier(3)
+    // Four parties:
+    // - The two simulators
+    // - The ticker
+    // - Player position synchroniser
+    private val synchroniser = CyclicBarrier(4)
 
-    private fun runTicker() {
+    private fun runEntitySimulator() {
         while (true) {
-            Thread.sleep(999999999999999)
+            synchroniser.await()
+        }
+    }
+
+    private fun runBlockEntitySimulator() {
+        while (true) {
+            synchroniser.await()
+        }
+    }
+
+    /**
+     * Sends out player position packets every tick for moving players.
+     */
+    private fun runPlayerPositionSyncher() {
+        while (true) {
+            for (player in players) {
+                val entity = player.entity ?: continue
+                if (entity.needsPositionSync.compareAndExchange(true, false)) {
+                    // don't serialise here, save valuable tick time
+                    val event = EntityMoveEvent(entity)
+                    events.put(event)
+                }
+            }
+
+            synchroniser.await()
+        }
+    }
+
+    /**
+     * Called by [runTicker] every time the tick finishes.
+     */
+    private fun endTick() {
+        // gross misuse of cyclicbarrier
+        // TODO: don't spam logs
+
+        if (synchroniser.numberWaiting != synchroniser.parties - 1) {
+            // skip waking anything up, move on until both simulators are ready
+            LOGGER.warn(
+                "Ticker pulse reached tick ${tickCounter.get()}, but simulators didn't catch up! " +
+                "Moving onto next tick..."
+            )
+        } else {
+            tickCounter.incrementAndGet()
+            synchroniser.await()
+        }
+    }
+
+    // Q: Why not just run the tick code in the scheduled executor
+    // A: I want the simulators to run in their own virtual thread without having to create
+    //    a new one every time.
+    private fun runTicker() {
+        val executor = Executors.newSingleThreadScheduledExecutor()
+        executor.use {
+            val future = executor.scheduleAtFixedRate(
+                ::endTick,
+                50L,
+                50L,
+                TimeUnit.MILLISECONDS
+            )
+            future.get()
         }
     }
 
@@ -239,6 +329,9 @@ public class WorldImpl(
                 is PlayerSpawnEvent -> {
                     sendPlayerSpawnPackets(next)
                 }
+                is EntityMoveEvent -> {
+                    sendEntityMovePackets(next)
+                }
             }
         }
     }
@@ -248,8 +341,11 @@ public class WorldImpl(
         LOGGER.info("Starting world simulation thread...")
 
         StructuredTaskScope.ShutdownOnFailure().use {
+            it.fork(::runEntitySimulator)
+            it.fork(::runBlockEntitySimulator)
             it.fork(::runTicker)
             it.fork(::runEventDrainer)
+            it.fork(::runPlayerPositionSyncher)
 
             it.join()
             it.throwIfFailed()

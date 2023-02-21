@@ -8,7 +8,7 @@ package tf.veriny.keymountain.api.entity
 
 import tf.veriny.keymountain.api.util.Vector3
 import tf.veriny.keymountain.api.world.World
-import tf.veriny.keymountain.api.world.block.WorldPosition
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -35,9 +35,10 @@ public interface Entity<Data : EntityData, Self : Entity<Data, Self>> {
     /** The unique ID across the server. Always increments upwards. */
     public val uniqueId: Int
 
-    // todo: movement stuff
-    // TODO: can we pack this into two longs? WorldPosition + offset, stored in three 16-bit floats
-    //  would save 4 bytes per entity over 3 doubles
+    /** If True, then this player needs a position sync. Used in networking. */
+    public val needsPositionSync: AtomicBoolean
+
+    /** The current position of this entity. */
     public val position: Vector3
 
     // rotation properties, only really used by other clients...
@@ -51,6 +52,7 @@ public interface Entity<Data : EntityData, Self : Entity<Data, Self>> {
         position.x = x
         position.y = y
         position.z = z
+        needsPositionSync.set(true)
     }
 
 }

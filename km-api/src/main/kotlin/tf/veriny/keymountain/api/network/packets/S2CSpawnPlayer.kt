@@ -2,12 +2,14 @@ package tf.veriny.keymountain.api.network.packets
 
 import okio.Buffer
 import tf.veriny.keymountain.api.client.ClientReference
-import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.ProtocolPacketSerialiser
 import tf.veriny.keymountain.api.util.*
 import java.util.*
 
+/**
+ * Sent by the server to other players to spawn the player referred to by [entityId].
+ */
 public class S2CSpawnPlayer(
     public val entityId: Int,
     public val uuid: UUID,

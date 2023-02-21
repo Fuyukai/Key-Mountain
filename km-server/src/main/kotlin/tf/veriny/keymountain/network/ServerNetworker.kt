@@ -180,7 +180,6 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             }
         }
 
-
         // ack!
         for (chunkX in -7..7) {
             for (chunkZ in -7..7) {
@@ -218,14 +217,11 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             LOGGER.trace("player sent position: ({}, {}, {})", packet.x, packet.z, packet.feetY)
         }
 
-        entity.position.x = packet.x
-        entity.position.z = packet.z
-        entity.position.y = packet.feetY
-
         if (rotation != null) {
             entity.yaw = rotation.yaw
             entity.pitch = rotation.pitch
         }
+        entity.setPosition(packet.x, packet.feetY, packet.z)
     }
 
     private fun handleSetPlayerPositionPacket(ref: ClientReference, packet: C2SSetPlayerPosition) {
@@ -245,6 +241,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
 
         entity.yaw = packet.yaw
         entity.pitch = packet.pitch
+        entity.needsPositionSync.set(true)
     }
 
     private fun handleConfirmTeleportationPacket(ref: ClientReference, packet: C2SConfirmTeleportation) {
@@ -285,6 +282,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addOutgoingPacket(PLAY, S2CChunkData.PACKET_ID, S2CChunkData)
         packets.addOutgoingPacket(PLAY, S2CPlayerInfoUpdate.PACKET_ID, S2CPlayerInfoUpdate)
         packets.addOutgoingPacket(PLAY, S2CSpawnPlayer.PACKET_ID, S2CSpawnPlayer)
+        packets.addOutgoingPacket(PLAY, S2CTeleportEntity.PACKET_ID, S2CTeleportEntity)
 
         packets.addIncomingPacket(BidiBrand.ID, BidiBrand, ::handleBrandPacket)
         packets.addOutgoingPacket(BidiBrand.ID, BidiBrand)
