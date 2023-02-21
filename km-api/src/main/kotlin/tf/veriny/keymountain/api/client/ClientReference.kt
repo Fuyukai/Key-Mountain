@@ -10,7 +10,7 @@ import tf.veriny.keymountain.api.entity.PlayerEntity
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
-import java.util.UUID
+import java.util.*
 
 // ClientReference holds a PlayerClient, which is the in-world player client.
 // whereas this is used for bookkeeping for a single connected player.

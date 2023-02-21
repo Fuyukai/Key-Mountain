@@ -6,7 +6,6 @@
 
 package tf.veriny.keymountain.api.world
 
-import okio.Buffer
 import tf.veriny.keymountain.api.client.ClientReference
 import tf.veriny.keymountain.api.entity.Entity
 import tf.veriny.keymountain.api.entity.EntityData

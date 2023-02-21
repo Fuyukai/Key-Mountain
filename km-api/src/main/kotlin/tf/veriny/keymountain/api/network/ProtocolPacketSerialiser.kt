@@ -11,7 +11,7 @@ import okio.Buffer
 /**
  * Used internally during networking to produce packets over the wire.
  */
-public interface ProtocolPacketSerialiser<T: ProtocolPacket> {
+public interface ProtocolPacketSerialiser<T : ProtocolPacket> {
     /**
      * Produces a new packet from the wire protocol.
      */

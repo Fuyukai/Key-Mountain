@@ -8,7 +8,6 @@ package tf.veriny.keymountain.api.world.block
 
 import kotlin.math.ceil
 import kotlin.math.log2
-import kotlin.reflect.KClass
 
 /** Base interface for block properties. */
 public interface BlockProperty<E : Any> {
@@ -67,7 +66,7 @@ public class IntProperty(
     override val default: Int
 ) : BlockProperty<Int> {
     init {
-        require(default in minimum .. maximum) {
+        require(default in minimum..maximum) {
             "'$default' must be in range '$minimum' .. '$maximum'"
         }
     }
@@ -84,8 +83,8 @@ public class IntProperty(
     // the number is just stored directly in the metadata
     override fun fromBits(data: UInt): Int = data.toInt() + minimum
     override fun toBits(data: Int): UInt = data.toUInt() - minimum.toUInt()
-    override fun permutations(): LinkedHashSet<Int> = LinkedHashSet((minimum .. maximum).toList())
-    override fun isValid(item: Int): Boolean = item in (minimum .. maximum)
+    override fun permutations(): LinkedHashSet<Int> = LinkedHashSet((minimum..maximum).toList())
+    override fun isValid(item: Int): Boolean = item in (minimum..maximum)
 }
 
 /**

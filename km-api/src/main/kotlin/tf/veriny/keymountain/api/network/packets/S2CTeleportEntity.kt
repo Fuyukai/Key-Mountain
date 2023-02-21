@@ -1,9 +1,17 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
 package tf.veriny.keymountain.api.network.packets
 
 import okio.Buffer
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.ProtocolPacketSerialiser
-import tf.veriny.keymountain.api.util.*
+import tf.veriny.keymountain.api.util.writeAngle
+import tf.veriny.keymountain.api.util.writeDouble
+import tf.veriny.keymountain.api.util.writeVarInt
 
 /**
  * Sets the position of an entity on the client.

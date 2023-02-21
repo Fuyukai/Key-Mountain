@@ -132,7 +132,7 @@ public class PacketRegistryImpl : PacketRegistry {
     }
 
     init {
-        addIncomingPacket(NetworkState.PLAY, C2SKeepAlive.PACKET_ID, C2SKeepAlive) { _, _, -> }
+        addIncomingPacket(NetworkState.PLAY, C2SKeepAlive.PACKET_ID, C2SKeepAlive) { _, _ -> }
         addOutgoingPacket(NetworkState.PLAY, S2CKeepAlive.PACKET_ID, S2CKeepAlive)
     }
 }

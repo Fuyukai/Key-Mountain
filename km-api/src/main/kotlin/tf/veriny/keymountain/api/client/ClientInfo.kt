@@ -6,7 +6,7 @@
 
 package tf.veriny.keymountain.api.client
 
-import java.util.UUID
+import java.util.*
 
 /** The login info for a client. */
 public data class ClientInfo(

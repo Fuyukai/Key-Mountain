@@ -12,7 +12,7 @@ import tf.veriny.keymountain.api.network.ProtocolPacketSerialiser
 
 /** Sent by the server when the client is asking for pings. */
 public class S2CStatusPong(public val value: Long) : ProtocolPacket {
-    public companion object : ProtocolPacketSerialiser<S2CStatusPong>  {
+    public companion object : ProtocolPacketSerialiser<S2CStatusPong> {
         public const val PACKET_ID: Int = 0x01
 
         override fun readIn(data: Buffer): S2CStatusPong {

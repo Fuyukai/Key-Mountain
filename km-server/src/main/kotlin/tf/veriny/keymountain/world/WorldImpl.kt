@@ -65,7 +65,7 @@ public class WorldImpl(
             for (chunkX in -7..7) {
                 for (chunkZ in -7..7) {
                     LOGGER.trace("setting chunk ({}, {})", chunkX, chunkZ)
-                    val section = ChunkColumn(chunkX, chunkZ,dimensionInfo.totalHeight / 16)
+                    val section = ChunkColumn(chunkX, chunkZ, dimensionInfo.totalHeight / 16)
                     val id = toChunkId(chunkX.toLong(), chunkZ.toLong())
                     world.chunks[id] = section
                 }
@@ -329,6 +329,7 @@ public class WorldImpl(
                 is PlayerSpawnEvent -> {
                     sendPlayerSpawnPackets(next)
                 }
+
                 is EntityMoveEvent -> {
                     sendEntityMovePackets(next)
                 }

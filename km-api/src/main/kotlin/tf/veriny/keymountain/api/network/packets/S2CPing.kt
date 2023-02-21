@@ -9,7 +9,6 @@ package tf.veriny.keymountain.api.network.packets
 import okio.Buffer
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.ProtocolPacketSerialiser
-import tf.veriny.keymountain.api.util.readVarInt
 
 /**
  * Pings the client.

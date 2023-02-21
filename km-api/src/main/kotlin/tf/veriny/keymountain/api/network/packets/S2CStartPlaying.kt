@@ -7,13 +7,8 @@
 package tf.veriny.keymountain.api.network.packets
 
 import com.dyescape.dataformat.nbt.databind.NBTMapper
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.core.type.TypeReference
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import okio.Buffer
-import tf.veriny.keymountain.api.data.Registry
-import tf.veriny.keymountain.api.data.RegistryWithIds
 import tf.veriny.keymountain.api.data.VanillaSynchronisableRegistry
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.ProtocolPacketSerialiser
@@ -21,9 +16,7 @@ import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
 import tf.veriny.keymountain.api.util.writeMcString
 import tf.veriny.keymountain.api.util.writeVarInt
-import tf.veriny.keymountain.api.world.DimensionInfo
 import tf.veriny.keymountain.api.world.GameMode
-import tf.veriny.keymountain.api.world.biome.BiomeNetworkInfo
 
 // login (play) on the wiki page, but this kinda sucks as a name
 // also, we omit some fields and hardcode them for now.

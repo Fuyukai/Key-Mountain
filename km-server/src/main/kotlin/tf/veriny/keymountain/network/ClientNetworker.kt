@@ -142,6 +142,7 @@ internal class ClientNetworker(
                     LOGGER.trace("potentially changing state to {}", packet.nextState)
                     clientReference.transitionToState(packet.nextState)
                 }
+
                 is C2SKeepAlive -> {
                     val keepAlive = keepAliveQueue.removeFirst()
                     if (keepAlive != packet.value) {
@@ -151,6 +152,7 @@ internal class ClientNetworker(
                         LOGGER.trace("received keep-alive: ${packet.value}")
                     }
                 }
+
                 else -> {
                     LOGGER.trace("read packet {}", packet)
 

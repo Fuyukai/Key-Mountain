@@ -45,8 +45,9 @@ public class BlockStateData {
     // despite forcing a quilt registry sync, the blockstate registry is still full of old
     // blocks. so, we need to make sure we use at least 15 bits or else it all goes to shit
     /** The number of bits per entry required to represent the BlockState data. */
-    public val bitsPerEntry: Int get() =
-        max(15, ceil(log2(counter.toFloat())).toInt())
+    public val bitsPerEntry: Int
+        get() =
+            max(15, ceil(log2(counter.toFloat())).toInt())
 
     public fun reset() {
         counter = 0

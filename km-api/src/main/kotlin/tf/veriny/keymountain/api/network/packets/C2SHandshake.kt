@@ -9,14 +9,14 @@
 package tf.veriny.keymountain.api.network.packets
 
 import okio.Buffer
-import tf.veriny.keymountain.api.util.readMcString
-import tf.veriny.keymountain.api.util.readVarInt
-import tf.veriny.keymountain.api.util.writeMcString
-import tf.veriny.keymountain.api.util.writeVarInt
 import tf.veriny.keymountain.api.IllegalPacketException
 import tf.veriny.keymountain.api.network.NetworkState
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.ProtocolPacketSerialiser
+import tf.veriny.keymountain.api.util.readMcString
+import tf.veriny.keymountain.api.util.readVarInt
+import tf.veriny.keymountain.api.util.writeMcString
+import tf.veriny.keymountain.api.util.writeVarInt
 
 /**
  * Send by the client to the server upon initial connection.
@@ -53,5 +53,6 @@ public class C2SHandshake(
             data.writeVarInt(packet.nextState.ordinal)
         }
     }
+
     override val id: Int get() = PACKET_ID
 }

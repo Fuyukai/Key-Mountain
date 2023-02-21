@@ -11,7 +11,6 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.util.Identifier
-import kotlin.math.min
 
 // TODO: probably can have these replaced with some sort of DimensionType interface, and
 //  automatically generate these for the protocol.
@@ -114,16 +113,22 @@ public data class DimensionInfo(
     // automatically generated based on the other properties
     @get:JsonProperty("piglin_safe")
     public val piglinSafe: Boolean get() = true
+
     @get:JsonProperty("bed_works")
     public val bedWorks: Boolean get() = allowBedsAndCompasses
+
     @get:JsonProperty("respawn_anchor_works")
     public val respawnAnchorWorks: Boolean get() = allowBedsAndCompasses
+
     @get:JsonProperty("has_raids")
     public val hasRaids: Boolean get() = false
+
     @get:JsonProperty("infiniburn")
     public val infiniteBurnTag: String get() = "#"
+
     @get:JsonProperty("effects")
     public val effects: String get() = "minecraft:overworld"
+
     @get:JsonProperty("ambient_light")
     public val ambientLight: Float = 1.0F
 }

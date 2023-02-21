@@ -12,7 +12,7 @@ import tf.veriny.keymountain.api.network.ProtocolPacketSerialiser
 import tf.veriny.keymountain.api.util.writeMcString
 import tf.veriny.keymountain.api.util.writeUuid
 import tf.veriny.keymountain.api.util.writeVarInt
-import java.util.UUID
+import java.util.*
 
 /** Sent by the server when logging in is successful. */
 public class S2CLoginSuccess(
