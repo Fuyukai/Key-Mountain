@@ -18,12 +18,12 @@ public class BidiBrand(public val brand: String) : PluginPacket {
     public companion object : PluginPacketSerialiser<BidiBrand> {
         public val ID: Identifier = Identifier("minecraft:brand")
 
-        override fun readIn(buffer: Buffer): BidiBrand {
-            return BidiBrand(buffer.readMcString())
+        override fun readIn(data: Buffer): BidiBrand {
+            return BidiBrand(data.readMcString())
         }
 
-        override fun writeOut(packet: BidiBrand, buffer: Buffer) {
-            buffer.writeMcString(packet.brand)
+        override fun writeOut(packet: BidiBrand, data: Buffer) {
+            data.writeMcString(packet.brand)
         }
     }
 

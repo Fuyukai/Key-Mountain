@@ -33,21 +33,21 @@ public class S2CRegistrySyncHandshake(public val supportedVerions: IntArray) : P
     public companion object : PluginPacketSerialiser<S2CRegistrySyncHandshake> {
         public val id: Identifier = Identifier("qsl:registry_sync/handshake")
 
-        override fun readIn(buffer: Buffer): S2CRegistrySyncHandshake {
-            val count = buffer.readVarInt()
+        override fun readIn(data: Buffer): S2CRegistrySyncHandshake {
+            val count = data.readVarInt()
             val versions = IntArray(count)
 
             for (ver in 0 until count) {
-                versions[ver] = buffer.readVarInt()
+                versions[ver] = data.readVarInt()
             }
 
             return S2CRegistrySyncHandshake(versions)
         }
 
-        override fun writeOut(packet: S2CRegistrySyncHandshake, buffer: Buffer) {
-            buffer.writeVarInt(packet.supportedVerions.size)
+        override fun writeOut(packet: S2CRegistrySyncHandshake, data: Buffer) {
+            data.writeVarInt(packet.supportedVerions.size)
             for (ver in packet.supportedVerions) {
-                buffer.writeVarInt(ver)
+                data.writeVarInt(ver)
             }
         }
     }
@@ -59,12 +59,12 @@ public class C2SRegistrySyncHandshake(public val supportedVersion: Int) : Plugin
     public companion object : PluginPacketSerialiser<C2SRegistrySyncHandshake> {
         public val id: Identifier = Identifier("qsl:registry_sync/handshake")
 
-        override fun readIn(buffer: Buffer): C2SRegistrySyncHandshake {
-            return C2SRegistrySyncHandshake(buffer.readVarInt())
+        override fun readIn(data: Buffer): C2SRegistrySyncHandshake {
+            return C2SRegistrySyncHandshake(data.readVarInt())
         }
 
-        override fun writeOut(packet: C2SRegistrySyncHandshake, buffer: Buffer) {
-            buffer.writeVarInt(packet.supportedVersion)
+        override fun writeOut(packet: C2SRegistrySyncHandshake, data: Buffer) {
+            data.writeVarInt(packet.supportedVersion)
         }
     }
 
@@ -78,18 +78,18 @@ public class S2CRegistrySyncStart(
     public companion object : PluginPacketSerialiser<S2CRegistrySyncStart> {
         public val id: Identifier = Identifier("qsl:registry_sync/registry_start")
 
-        override fun readIn(buffer: Buffer): S2CRegistrySyncStart {
-            val id = buffer.readMcString()
-            val entryCount = buffer.readVarInt()
-            buffer.readByte()  // flag vars, we don't care
+        override fun readIn(data: Buffer): S2CRegistrySyncStart {
+            val id = data.readMcString()
+            val entryCount = data.readVarInt()
+            data.readByte()  // flag vars, we don't care
             return S2CRegistrySyncStart(Identifier(id), entryCount)
         }
 
-        override fun writeOut(packet: S2CRegistrySyncStart, buffer: Buffer) {
-            buffer.writeMcString(packet.registryId.full)
-            buffer.writeVarInt(packet.entryCount)
+        override fun writeOut(packet: S2CRegistrySyncStart, data: Buffer) {
+            data.writeMcString(packet.registryId.full)
+            data.writeVarInt(packet.entryCount)
             // no flags
-            buffer.writeByte(0)
+            data.writeByte(0)
         }
     }
 
