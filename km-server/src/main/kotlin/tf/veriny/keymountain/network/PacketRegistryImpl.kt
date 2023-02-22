@@ -54,6 +54,13 @@ public class PacketRegistryImpl : PacketRegistry {
         throw NoSuchPacketException("No such packet '0x${id.toString(16)}' in state '$state'")
     }
 
+    /**
+     * Checks if we support this plugin packet or not.
+     */
+    public fun supportsPacket(id: Identifier): Boolean {
+        return incomingPluginPackets[id] != null || outgoingPluginPackets[id] != null
+    }
+
     override fun <T : ProtocolPacket> addIncomingPacket(
         state: NetworkState, id: Int,
         maker: ProtocolPacketSerialiser<T>,

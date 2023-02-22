@@ -23,5 +23,6 @@ public abstract class BaseEntity<Data : EntityData, Self : Entity<Data, Self>>(
     override val position: Vector3 = Vector3(0.0, 0.0, 0.0)
     override var pitch: Float = 0.0f
     override var yaw: Float = 0.0f
+    override var isOnGround: Boolean = false
 
 }

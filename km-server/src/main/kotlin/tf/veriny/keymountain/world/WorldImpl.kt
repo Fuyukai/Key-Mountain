@@ -225,7 +225,7 @@ public class WorldImpl(
             event.entity.position.z,
             event.entity.yaw,
             event.entity.pitch,
-            true
+            onGround = event.entity.isOnGround
         )
 
         for (player in players) {

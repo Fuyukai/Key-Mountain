@@ -26,6 +26,7 @@ import tf.veriny.keymountain.api.network.NetworkState.*
 import tf.veriny.keymountain.api.network.ProtocolPacket
 import tf.veriny.keymountain.api.network.packets.*
 import tf.veriny.keymountain.api.network.plugin.BidiBrand
+import tf.veriny.keymountain.api.network.plugin.BidiRegisterChannels
 import tf.veriny.keymountain.api.network.plugin.PluginPacket
 import tf.veriny.keymountain.api.util.Identifiable
 import tf.veriny.keymountain.api.world.GameMode
@@ -60,7 +61,17 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         LOGGER.debug("Client ${ref.loginInfo.username} is using client '${packet.brand}'")
     }
 
+    @Suppress("UNUSED_PARAMETER")
+    private fun handleRegisterChannelsPacket(ref: ClientReference, packet: BidiRegisterChannels) {
+        for (channel in packet.channels) {
+            if (!server.data.packets.supportsPacket(channel)) {
+                LOGGER.warn("Client registered unknown channel $channel")
+            }
+        }
+    }
+
     // == Handshake == //
+    @Suppress("UNUSED_PARAMETER")
     private fun handleHandshakePacket(ref: ClientReference, packet: C2SHandshake) {
         LOGGER.trace(
             "client wants to connect to ${packet.serverAddress}:${packet.port}"
@@ -75,6 +86,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
     }
 
     // == Status == //
+    @Suppress("UNUSED_PARAMETER")
     private fun handleStatusRequestPacket(ref: ClientReference, packet: C2SStatusRequest) {
         val statusResponse = ServerStatusResponse(
             version = ServerStatusResponse.StatusVersion(
@@ -148,6 +160,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         val playerEntity = world.addPlayer(ref)
 
         // 2) Send the "start playing" packet.
+        @Suppress("UNCHECKED_CAST")
         val startPlaying = S2CStartPlaying(
             entityId = playerEntity.uniqueId,
             isHardcore = false,
@@ -221,7 +234,8 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             entity.yaw = rotation.yaw
             entity.pitch = rotation.pitch
         }
-        entity.setPosition(packet.x, packet.feetY, packet.z)
+
+        entity.setPosition(packet.x, packet.feetY, packet.z, isOnGround = onGround)
     }
 
     private fun handleSetPlayerPositionPacket(ref: ClientReference, packet: C2SSetPlayerPosition) {
@@ -244,10 +258,12 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         entity.needsPositionSync.set(true)
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun handleConfirmTeleportationPacket(ref: ClientReference, packet: C2SConfirmTeleportation) {
         // pass
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun handleSwingArmPacket(ref: ClientReference, packet: C2SSwingArm) {
         // pass
     }
@@ -286,6 +302,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
 
         packets.addIncomingPacket(BidiBrand.ID, BidiBrand, ::handleBrandPacket)
         packets.addOutgoingPacket(BidiBrand.ID, BidiBrand)
+        packets.addIncomingPacket(BidiRegisterChannels.ID, BidiRegisterChannels, ::handleRegisterChannelsPacket)
 
         syncher.setupPacketHandlers(packets)
     }

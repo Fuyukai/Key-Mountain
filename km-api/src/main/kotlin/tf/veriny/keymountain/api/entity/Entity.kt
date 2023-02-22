@@ -41,6 +41,9 @@ public interface Entity<Data : EntityData, Self : Entity<Data, Self>> {
     /** The current position of this entity. */
     public val position: Vector3
 
+    /** If this entity is currently touching the ground. */
+    public var isOnGround: Boolean
+
     // rotation properties, only really used by other clients...
     public var yaw: Float
     public var pitch: Float
@@ -48,10 +51,11 @@ public interface Entity<Data : EntityData, Self : Entity<Data, Self>> {
     /**
      * Sets the position of this entity.
      */
-    public fun setPosition(x: Double, y: Double, z: Double) {
+    public fun setPosition(x: Double, y: Double, z: Double, isOnGround: Boolean = true) {
         position.x = x
         position.y = y
         position.z = z
+        this.isOnGround = isOnGround
         needsPositionSync.set(true)
     }
 

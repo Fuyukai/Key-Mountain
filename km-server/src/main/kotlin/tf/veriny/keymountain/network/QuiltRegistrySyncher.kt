@@ -190,10 +190,10 @@ public class QuiltRegistrySyncher(
     }
 
     public fun setupPacketHandlers(packets: PacketRegistryImpl) {
-        data.packets.addOutgoingPacket(S2CRegistrySyncHandshake.id, S2CRegistrySyncHandshake)
-        data.packets.addIncomingPacket(C2SRegistrySyncHandshake.id, C2SRegistrySyncHandshake, ::handleHandshake)
+        packets.addOutgoingPacket(S2CRegistrySyncHandshake.id, S2CRegistrySyncHandshake)
+        packets.addIncomingPacket(C2SRegistrySyncHandshake.id, C2SRegistrySyncHandshake, ::handleHandshake)
 
-        data.packets.addOutgoingPacket(S2CRegistrySyncStart.id, S2CRegistrySyncStart)
+        packets.addOutgoingPacket(S2CRegistrySyncStart.id, S2CRegistrySyncStart)
     }
 
     public fun sendHandshake(ref: ClientReference) {
