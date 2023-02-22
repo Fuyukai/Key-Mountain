@@ -265,7 +265,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
             return ref.die("Illegal move packet")
         }
 
-        entity.isOnGround = true
+        entity.isOnGround = packet.value
         entity.needsPositionSync.set(true)
     }
 
@@ -276,6 +276,16 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
 
     @Suppress("UNUSED_PARAMETER")
     private fun handleSwingArmPacket(ref: ClientReference, packet: C2SSwingArm) {
+        // pass
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun handlePlayerAbilities(ref: ClientReference, packet: C2SPlayerAbilities) {
+        // pass
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun handlePlayerCommand(ref: ClientReference, packet: C2SPlayerCommand) {
         // pass
     }
 
@@ -300,6 +310,8 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addIncomingPacket(PLAY, C2SSetPlayerRotation.PACKET_ID, C2SSetPlayerRotation, ::handleSetPlayerRotationPacket)
         packets.addIncomingPacket(PLAY, C2SSwingArm.PACKET_ID, C2SSwingArm, ::handleSwingArmPacket)
         packets.addIncomingPacket(PLAY, C2SSetPlayerOnGround.PACKET_ID, C2SSetPlayerOnGround, ::handleSetPlayerOnGroundPacket)
+        packets.addIncomingPacket(PLAY, C2SPlayerAbilities.PACKET_ID, C2SPlayerAbilities, ::handlePlayerAbilities)
+        packets.addIncomingPacket(PLAY, C2SPlayerCommand.PACKET_ID, C2SPlayerAbilities, ::handlePlayerAbilities)
 
         packets.addOutgoingPacket(PLAY, S2CPing.PACKET_ID, S2CPing)
         packets.addOutgoingPacket(PLAY, S2CPluginMessage.PACKET_ID, S2CPluginMessage)
