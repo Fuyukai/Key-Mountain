@@ -258,6 +258,17 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         entity.needsPositionSync.set(true)
     }
 
+    private fun handleSetPlayerOnGroundPacket(ref: ClientReference, packet: C2SSetPlayerOnGround) {
+        val entity = ref.entity
+        if (entity == null) {
+            LOGGER.error("client sent invalid on-ground packet!")
+            return ref.die("Illegal move packet")
+        }
+
+        entity.isOnGround = true
+        entity.needsPositionSync.set(true)
+    }
+
     @Suppress("UNUSED_PARAMETER")
     private fun handleConfirmTeleportationPacket(ref: ClientReference, packet: C2SConfirmTeleportation) {
         // pass
@@ -288,6 +299,7 @@ public class ServerNetworker(private val server: KeyMountainServer) : Runnable {
         packets.addIncomingPacket(PLAY, C2SConfirmTeleportation.PACKET_ID, C2SConfirmTeleportation, ::handleConfirmTeleportationPacket)
         packets.addIncomingPacket(PLAY, C2SSetPlayerRotation.PACKET_ID, C2SSetPlayerRotation, ::handleSetPlayerRotationPacket)
         packets.addIncomingPacket(PLAY, C2SSwingArm.PACKET_ID, C2SSwingArm, ::handleSwingArmPacket)
+        packets.addIncomingPacket(PLAY, C2SSetPlayerOnGround.PACKET_ID, C2SSetPlayerOnGround, ::handleSetPlayerOnGroundPacket)
 
         packets.addOutgoingPacket(PLAY, S2CPing.PACKET_ID, S2CPing)
         packets.addOutgoingPacket(PLAY, S2CPluginMessage.PACKET_ID, S2CPluginMessage)

@@ -65,19 +65,11 @@ public class WorldImpl(
             for (chunkX in -7..7) {
                 for (chunkZ in -7..7) {
                     LOGGER.trace("setting chunk ({}, {})", chunkX, chunkZ)
-                    val section = ChunkColumn(chunkX, chunkZ, dimensionInfo.totalHeight / 16)
+                    val section = ChunkColumn.generateDefault(chunkX, chunkZ, dimensionInfo.totalHeight / 16, server.data)
                     val id = toChunkId(chunkX.toLong(), chunkZ.toLong())
                     world.chunks[id] = section
                 }
             }
-
-            val stone = server.data.blocks.get(Identifier("minecraft:stone"))!!
-            for (x in 0 until 9) {
-                for (z in 0 until 9) {
-                    world.setBlock(WorldPosition(x, z, 128), stone)
-                }
-            }
-
 
             return world
         }

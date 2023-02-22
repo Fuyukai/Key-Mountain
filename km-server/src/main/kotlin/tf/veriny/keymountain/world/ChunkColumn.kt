@@ -16,6 +16,8 @@
 
 package tf.veriny.keymountain.world
 
+import tf.veriny.keymountain.api.util.Identifier
+import tf.veriny.keymountain.data.Data
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -28,6 +30,34 @@ public class ChunkColumn(
     private val height: Int,
     public val chunks: Array<Chunk> = Array(height) { Chunk() }
 ) {
+    public companion object {
+        public fun generateDefault(
+            columnX: Int, columnZ: Int, height: Int, data: Data
+        ): ChunkColumn {
+            // lower chunks are full stone
+            val stone = data.blocks.get(Identifier("minecraft:stone"))!!
+            val stoneId = data.blocks.getNumericId(stone)
+
+            val chunks = Array(height) {
+                val c = Chunk()
+
+                if (it < height/4) {
+                    for (x in 0 until 16) {
+                        for (y in 0 until 16) {
+                            for (z in 0 until 16) {
+                                c.setBlock(x, y, z, stoneId, 0U)
+                            }
+                        }
+                    }
+                }
+
+                c
+            }
+
+            return ChunkColumn(columnX, columnZ, height, chunks)
+        }
+    }
+
 
     // this is per-column to allow the client to see a consistent update state during serialisation
     // as if a lower chunk is written, but a different client then updates it during writing another
